@@ -74,6 +74,19 @@ impl Instance {
             &*ptr
         }
     }
+
+    pub fn set_common_settings(
+        &mut self,
+        settings: &ffi::CommonSettings,
+    ) -> Result<(), ffi::Result> {
+        unsafe {
+            let result = ffi::SetCommonSettings(self.0, settings);
+            match result {
+                ffi::Result::Success => Ok(()),
+                _ => Err(result),
+            }
+        }
+    }
 }
 
 impl Drop for Instance {

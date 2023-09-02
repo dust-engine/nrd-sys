@@ -401,14 +401,10 @@ pub struct InstanceDesc {
 }
 impl InstanceDesc {
     pub fn samplers(&self) -> &[Sampler] {
-        unsafe {
-            std::slice::from_raw_parts(self.samplers, self.samplers_num as usize)
-        }
+        unsafe { std::slice::from_raw_parts(self.samplers, self.samplers_num as usize) }
     }
     pub fn pipelines(&self) -> &[PipelineDesc] {
-        unsafe {
-            std::slice::from_raw_parts(self.pipelines, self.pipelines_num as usize)
-        }
+        unsafe { std::slice::from_raw_parts(self.pipelines, self.pipelines_num as usize) }
     }
     pub fn permanent_pool(&self) -> &[TextureDesc] {
         unsafe {
@@ -452,6 +448,98 @@ impl Debug for InstanceDesc {
     }
 }
 
+#[repr(u8)]
+#[derive(Debug)]
+pub enum AccumulationMode {
+    // Common mode (accumulation continues normally)
+    Continue,
+
+    // Discards history and resets accumulation
+    Restart,
+
+    // Like RESTART, but additionally clears resources from potential garbage
+    ClearAndRestart,
+}
+
+#[repr(C)]
+#[derive(Debug)]
+pub struct CommonSettings {
+    // Matrix requirements:
+    //     - usage - vector is a column
+    //     - layout - column-major
+    //     - non jittered!
+    // LH / RH projection matrix (INF far plane is supported) with non-swizzled rows, i.e. clip-space depth = z / w
+    view_to_clip_matrix: [f32; 16],
+
+    // Previous projection matrix
+    view_to_clip_matrix_prev: [f32; 16],
+
+    // World-space to camera-space matrix
+    world_to_view_matrix: [f32; 16],
+
+    // If coordinate system moves with the camera, camera delta must be included to reflect camera motion
+    world_to_view_matrix_prev: [f32; 16],
+
+    // (Optional) Previous world-space to current world-space matrix. It is for virtual normals, where a coordinate
+    // system of the virtual space changes frame to frame, such as in a case of animated intermediary reflecting
+    // surfaces when primary surface replacement is used for them.
+    world_prev_to_world_matrix: [f32; 16],
+
+    // used as "IN_MV * motionVectorScale" (use .z = 0 for 2D screen-space motion)
+    motion_vector_scale: [f32; 3],
+
+    // [-0.5; 0.5] - sampleUv = pixelUv + cameraJitter
+    camera_jitter: [f32; 2],
+    camera_jitter_prev: [f32; 2],
+
+    // (0; 1] - dynamic resolution scaling
+    resolution_scale: [f32; 2],
+    resolution_scale_prev: [f32; 2],
+
+    // (ms) - user provided if > 0, otherwise - tracked internally
+    time_delta_between_frames: f32,
+
+    // (units) > 0 - use TLAS or tracing range (max value = NRD_FP16_MAX / NRD_FP16_VIEWZ_SCALE - 1 = 524031)
+    denoising_range: f32,
+
+    // (normalized %) - if relative distance difference is greater than threshold, history gets reset (0.5-2.5% works well)
+    disocclusion_threshold: f32,
+
+    // (normalized %) - alternative disocclusion threshold, which is mixed to based on IN_DISOCCLUSION_THRESHOLD_MIX
+    disocclusion_threshold_alternate: f32,
+
+    // [0; 1] - enables "noisy input / denoised output" comparison
+    split_screen: f32,
+
+    // For internal needs
+    debug: f32,
+
+    // (pixels) - data rectangle origin in ALL input textures
+    input_subrect_origin: [u32; 2],
+
+    // A consecutive number
+    frame_index: u32,
+
+    // To reset history set to RESTART / CLEAR_AND_RESTART for one frame
+    accumulation_mode: AccumulationMode,
+
+    // If "true" IN_MV is 3D motion in world-space (0 should be everywhere if the scene is static),
+    // otherwise it's 2D (+ optional Z delta) screen-space motion (0 should be everywhere if the camera doesn't move) (recommended value = true)
+    is_motion_vector_in_world_space: bool,
+
+    // If "true" IN_DIFF_CONFIDENCE and IN_SPEC_CONFIDENCE are available
+    is_history_confidence_available: bool,
+
+    // If "true" IN_DISOCCLUSION_THRESHOLD_MIX is available
+    is_disocclusion_threshold_mix_available: bool,
+
+    // If "true" IN_BASECOLOR_METALNESS is available
+    is_base_color_metalness_available: bool,
+
+    // Enables debug overlay in OUT_VALIDATION, requires "InstanceCreationDesc::allowValidation = true"
+    enable_validation: bool,
+}
+
 #[allow(non_snake_case)]
 extern "fastcall" {
     pub(crate) fn GetLibraryDesc() -> &'static LibraryDesc;
@@ -459,4 +547,5 @@ extern "fastcall" {
         -> Result;
     pub(crate) fn DestroyInstance(instance: *mut c_void);
     pub(crate) fn GetInstanceDesc(instance: *mut c_void) -> *const InstanceDesc;
+    pub(crate) fn SetCommonSettings(instance: *mut c_void, settings: &CommonSettings) -> Result;
 }
