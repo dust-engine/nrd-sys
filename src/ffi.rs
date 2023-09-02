@@ -1,4 +1,5 @@
 use std::{
+    default,
     ffi::{c_char, c_void},
     fmt::Debug,
 };
@@ -207,6 +208,15 @@ pub enum Result {
     InvalidArgument,
     Unsupported,
     NonUniqueIdentifier,
+}
+
+impl Result {
+    pub fn ok<T>(self, value: T) -> std::result::Result<T, Result> {
+        match self {
+            Result::Success => Ok(value),
+            _ => Err(self),
+        }
+    }
 }
 
 #[repr(transparent)]
@@ -469,75 +479,108 @@ pub struct CommonSettings {
     //     - layout - column-major
     //     - non jittered!
     // LH / RH projection matrix (INF far plane is supported) with non-swizzled rows, i.e. clip-space depth = z / w
-    view_to_clip_matrix: [f32; 16],
+    pub view_to_clip_matrix: [f32; 16],
 
     // Previous projection matrix
-    view_to_clip_matrix_prev: [f32; 16],
+    pub view_to_clip_matrix_prev: [f32; 16],
 
     // World-space to camera-space matrix
-    world_to_view_matrix: [f32; 16],
+    pub world_to_view_matrix: [f32; 16],
 
     // If coordinate system moves with the camera, camera delta must be included to reflect camera motion
-    world_to_view_matrix_prev: [f32; 16],
+    pub world_to_view_matrix_prev: [f32; 16],
 
     // (Optional) Previous world-space to current world-space matrix. It is for virtual normals, where a coordinate
     // system of the virtual space changes frame to frame, such as in a case of animated intermediary reflecting
     // surfaces when primary surface replacement is used for them.
-    world_prev_to_world_matrix: [f32; 16],
+    pub world_prev_to_world_matrix: [f32; 16],
 
     // used as "IN_MV * motionVectorScale" (use .z = 0 for 2D screen-space motion)
-    motion_vector_scale: [f32; 3],
+    pub motion_vector_scale: [f32; 3],
 
     // [-0.5; 0.5] - sampleUv = pixelUv + cameraJitter
-    camera_jitter: [f32; 2],
-    camera_jitter_prev: [f32; 2],
+    pub camera_jitter: [f32; 2],
+    pub camera_jitter_prev: [f32; 2],
 
     // (0; 1] - dynamic resolution scaling
-    resolution_scale: [f32; 2],
-    resolution_scale_prev: [f32; 2],
+    pub resolution_scale: [f32; 2],
+    pub resolution_scale_prev: [f32; 2],
 
     // (ms) - user provided if > 0, otherwise - tracked internally
-    time_delta_between_frames: f32,
+    pub time_delta_between_frames: f32,
 
     // (units) > 0 - use TLAS or tracing range (max value = NRD_FP16_MAX / NRD_FP16_VIEWZ_SCALE - 1 = 524031)
-    denoising_range: f32,
+    pub denoising_range: f32,
 
     // (normalized %) - if relative distance difference is greater than threshold, history gets reset (0.5-2.5% works well)
-    disocclusion_threshold: f32,
+    pub disocclusion_threshold: f32,
 
     // (normalized %) - alternative disocclusion threshold, which is mixed to based on IN_DISOCCLUSION_THRESHOLD_MIX
-    disocclusion_threshold_alternate: f32,
+    pub disocclusion_threshold_alternate: f32,
 
     // [0; 1] - enables "noisy input / denoised output" comparison
-    split_screen: f32,
+    pub split_screen: f32,
 
     // For internal needs
-    debug: f32,
+    pub debug: f32,
 
     // (pixels) - data rectangle origin in ALL input textures
-    input_subrect_origin: [u32; 2],
+    pub input_subrect_origin: [u32; 2],
 
     // A consecutive number
-    frame_index: u32,
+    pub frame_index: u32,
 
     // To reset history set to RESTART / CLEAR_AND_RESTART for one frame
-    accumulation_mode: AccumulationMode,
+    pub accumulation_mode: AccumulationMode,
 
     // If "true" IN_MV is 3D motion in world-space (0 should be everywhere if the scene is static),
     // otherwise it's 2D (+ optional Z delta) screen-space motion (0 should be everywhere if the camera doesn't move) (recommended value = true)
-    is_motion_vector_in_world_space: bool,
+    pub is_motion_vector_in_world_space: bool,
 
     // If "true" IN_DIFF_CONFIDENCE and IN_SPEC_CONFIDENCE are available
-    is_history_confidence_available: bool,
+    pub is_history_confidence_available: bool,
 
     // If "true" IN_DISOCCLUSION_THRESHOLD_MIX is available
-    is_disocclusion_threshold_mix_available: bool,
+    pub is_disocclusion_threshold_mix_available: bool,
 
     // If "true" IN_BASECOLOR_METALNESS is available
-    is_base_color_metalness_available: bool,
+    pub is_base_color_metalness_available: bool,
 
     // Enables debug overlay in OUT_VALIDATION, requires "InstanceCreationDesc::allowValidation = true"
-    enable_validation: bool,
+    pub enable_validation: bool,
+}
+impl Default for CommonSettings {
+    fn default() -> Self {
+        const IDENTITY: [f32; 16] = [
+            1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
+        ];
+        Self {
+            view_to_clip_matrix: [0.0; 16],
+            view_to_clip_matrix_prev: [0.0; 16],
+            world_to_view_matrix: [0.0; 16],
+            world_to_view_matrix_prev: [0.0; 16],
+            world_prev_to_world_matrix: IDENTITY,
+            motion_vector_scale: [1.0, 1.0, 0.0],
+            camera_jitter: [0.0; 2],
+            camera_jitter_prev: [0.0; 2],
+            resolution_scale: [1.0, 1.0],
+            resolution_scale_prev: [1.0, 1.0],
+            time_delta_between_frames: 0.0,
+            denoising_range: 500000.0,
+            disocclusion_threshold: 0.01,
+            disocclusion_threshold_alternate: 0.05,
+            split_screen: 0.0,
+            debug: 0.0,
+            input_subrect_origin: [0, 0],
+            frame_index: 0,
+            accumulation_mode: AccumulationMode::Continue,
+            is_motion_vector_in_world_space: false,
+            is_history_confidence_available: false,
+            is_disocclusion_threshold_mix_available: false,
+            is_base_color_metalness_available: false,
+            enable_validation: false,
+        }
+    }
 }
 
 #[repr(u32)]
@@ -703,6 +746,17 @@ pub struct HitDistanceParameters {
     pub d: f32,
 }
 
+impl Default for HitDistanceParameters {
+    fn default() -> Self {
+        Self {
+            a: 3.0,
+            b: 0.1,
+            c: 20.0,
+            d: -25.0,
+        }
+    }
+}
+
 // Antilag logic:
 //    delta = ( abs( old - new ) - localVariance * sigmaScale ) / ( max( old, new ) + localVariance * sigmaScale + sensitivityToDarkness )
 //    delta = LinearStep( thresholdMax, thresholdMin, delta )
@@ -726,6 +780,18 @@ pub struct AntilagIntensitySettings {
     pub enable: bool, // IMPORTANT: doesn't affect "occlusion" denoisers
 }
 
+impl Default for AntilagIntensitySettings {
+    fn default() -> Self {
+        Self {
+            threshold_min: 0.3,
+            threshold_max: 0.2,
+            sigma_scale: 1.0,
+            sensitivity_to_darkness: 0.0,
+            enable: false,
+        }
+    }
+}
+
 #[repr(C)]
 pub struct AntilagHitDistanceSettings {
     // (normalized %) - must almost ignore residual noise (boiling), default is tuned for 0.5rpp for the worst case
@@ -742,6 +808,18 @@ pub struct AntilagHitDistanceSettings {
 
     // Enabled by default
     pub enable: bool,
+}
+
+impl Default for AntilagHitDistanceSettings {
+    fn default() -> Self {
+        Self {
+            threshold_min: 0.03,
+            threshold_max: 0.2,
+            sigma_scale: 1.0,
+            sensitivity_to_darkness: 0.1,
+            enable: true,
+        }
+    }
 }
 
 #[repr(u8)]
@@ -827,6 +905,36 @@ pub struct ReblurSettings {
     pub enable_material_test_for_specular: bool,
 }
 
+impl Default for ReblurSettings {
+    fn default() -> Self {
+        Self {
+            hit_distance_parameters: Default::default(),
+            antilag_intensity_settings: Default::default(),
+            antilag_hit_distance_settings: Default::default(),
+            max_accumulated_frame_num: 30,
+            max_fast_accumulated_frame_num: 6,
+            history_fix_frame_num: 3,
+            diffuse_prepass_blur_radius: 30.0,
+            specular_prepass_blur_radius: 50.0,
+            blur_radius: 15.0,
+            history_fix_stride_between_samples: 14.0,
+            lobe_angle_fraction: 0.15,
+            roughness_fraction: 0.15,
+            responsive_accumulation_roughness_threshold: 0.0,
+            stabilization_strength: 1.0,
+            plane_distance_sensitivity: 0.005,
+            specular_probability_thresholds_for_mv_modification: [0.5, 0.9],
+            checkerboard_mode: CheckerboardMode::OFF,
+            hit_distance_reconstruction_mode: HitDistanceReconstructionMode::OFF,
+            enable_anti_firefly: false,
+            enable_reference_accumulation: false,
+            enable_performance_mode: false,
+            enable_material_test_for_diffuse: false,
+            enable_material_test_for_specular: false,
+        }
+    }
+}
+
 #[repr(C)]
 pub struct SigmaSettings {
     // (normalized %) - represents maximum allowed deviation from local tangent plane
@@ -834,6 +942,14 @@ pub struct SigmaSettings {
 
     // [1; 3] - adds bias and stability if > 1
     pub blur_radius_scale: f32,
+}
+impl Default for SigmaSettings {
+    fn default() -> Self {
+        Self {
+            plane_distance_sensitivity: 0.005,
+            blur_radius_scale: 2.0,
+        }
+    }
 }
 
 // RELAX_DIFFUSE_SPECULAR
@@ -926,6 +1042,48 @@ pub struct RelaxDiffuseSpecularSettings {
     pub enable_material_test_for_specular: bool,
 }
 
+impl Default for RelaxDiffuseSpecularSettings {
+    fn default() -> Self {
+        Self {
+            diffuse_prepass_blur_radius: 0.0,
+            specular_prepass_blur_radius: 50.0,
+            diffuse_max_accumulated_frame_num: 30,
+            specular_max_accumulated_frame_num: 30,
+            diffuse_max_fast_accumulated_frame_num: 6,
+            specular_max_fast_accumulated_frame_num: 6,
+            history_fix_frame_num: 3,
+            diffuse_phi_luminance: 2.0,
+            specular_phi_luminance: 1.0,
+            diffuse_lobe_angle_fraction: 0.5,
+            specular_lobe_angle_fraction: 0.5,
+            roughness_fraction: 0.15,
+            specular_variance_boost: 0.0,
+            specular_lobe_angle_slack: 0.15,
+            history_fix_stride_between_samples: 14.0,
+            history_fix_edge_stopping_normal_power: 8.0,
+            history_clamping_color_box_sigma_scale: 2.0,
+            spatial_variance_estimation_history_threshold: 3,
+            atrous_iteration_num: 5,
+            diffuse_min_luminance_weight: 0.0,
+            specular_min_luminance_weight: 0.0,
+            depth_threshold: 0.003,
+            confidence_driven_relaxation_multiplier: 0.0,
+            confidence_driven_luminance_edge_stopping_relaxation: 0.0,
+            confidence_driven_normal_edge_stopping_relaxation: 0.0,
+            luminance_edge_stopping_relaxation: 0.5,
+            normal_edge_stopping_relaxation: 0.3,
+            roughness_edge_stopping_relaxation: 1.0,
+            checkerboard_mode: CheckerboardMode::OFF,
+            hit_distance_reconstruction_mode: HitDistanceReconstructionMode::OFF,
+            enable_anti_firefly: false,
+            enable_reprojection_test_skipping_without_motion: false,
+            enable_roughness_edge_stopping: true,
+            enable_material_test_for_diffuse: false,
+            enable_material_test_for_specular: false,
+        }
+    }
+}
+
 // RELAX_DIFFUSE
 
 #[repr(C)]
@@ -959,6 +1117,34 @@ pub struct RelaxDiffuseSettings {
     pub enable_anti_firefly: bool,
     pub enable_reprojection_test_skipping_without_motion: bool,
     pub enable_material_test: bool,
+}
+
+impl Default for RelaxDiffuseSettings {
+    fn default() -> Self {
+        Self {
+            prepass_blur_radius: 0.0,
+            diffuse_max_accumulated_frame_num: 30,
+            diffuse_max_fast_accumulated_frame_num: 6,
+            history_fix_frame_num: 3,
+            diffuse_phi_luminance: 2.0,
+            diffuse_lobe_angle_fraction: 0.5,
+            history_fix_edge_stopping_normal_power: 8.0,
+            history_fix_stride_between_samples: 14.0,
+            history_clamping_color_box_sigma_scale: 2.0,
+            spatial_variance_estimation_history_threshold: 3,
+            atrous_iteration_num: 5,
+            min_luminance_weight: 0.0,
+            depth_threshold: 0.01,
+            confidence_driven_relaxation_multiplier: 0.0,
+            confidence_driven_luminance_edge_stopping_relaxation: 0.0,
+            confidence_driven_normal_edge_stopping_relaxation: 0.0,
+            checkerboard_mode: CheckerboardMode::OFF,
+            hit_distance_reconstruction_mode: HitDistanceReconstructionMode::OFF,
+            enable_anti_firefly: false,
+            enable_reprojection_test_skipping_without_motion: false,
+            enable_material_test: false,
+        }
+    }
 }
 
 // RELAX_SPECULAR
@@ -1006,6 +1192,54 @@ pub struct RelaxSpecularSettings {
     pub enable_material_test: bool,
 }
 
+impl Default for RelaxSpecularSettings {
+    fn default() -> Self {
+        Self {
+            prepass_blur_radius: 50.0,
+            specular_max_accumulated_frame_num: 30,
+            specular_max_fast_accumulated_frame_num: 6,
+            history_fix_frame_num: 3,
+            specular_phi_luminance: 1.0,
+            diffuse_lobe_angle_fraction: 0.5,
+            specular_lobe_angle_fraction: 0.5,
+            roughness_fraction: 0.15,
+            specular_variance_boost: 0.0,
+            specular_lobe_angle_slack: 0.15,
+            history_fix_edge_stopping_normal_power: 8.0,
+            history_fix_stride_between_samples: 14.0,
+            history_clamping_color_box_sigma_scale: 2.0,
+            spatial_variance_estimation_history_threshold: 3,
+            atrous_iteration_num: 5,
+            min_luminance_weight: 0.0,
+            depth_threshold: 0.01,
+            confidence_driven_relaxation_multiplier: 0.0,
+            confidence_driven_luminance_edge_stopping_relaxation: 0.0,
+            confidence_driven_normal_edge_stopping_relaxation: 0.0,
+            luminance_edge_stopping_relaxation: 0.5,
+            normal_edge_stopping_relaxation: 0.3,
+            roughness_edge_stopping_relaxation: 1.0,
+            checkerboard_mode: CheckerboardMode::OFF,
+            hit_distance_reconstruction_mode: HitDistanceReconstructionMode::OFF,
+            enable_anti_firefly: false,
+            enable_reprojection_test_skipping_without_motion: false,
+            enable_roughness_edge_stopping: true,
+            enable_material_test: false,
+        }
+    }
+}
+
+pub struct ReferenceSettings {
+    // (>= 0) - maximum number of linearly accumulated frames ( = FPS * "time of accumulation")
+    pub max_accumulated_frame_num: u32,
+}
+impl Default for ReferenceSettings {
+    fn default() -> Self {
+        Self {
+            max_accumulated_frame_num: 1024,
+        }
+    }
+}
+
 #[allow(non_snake_case)]
 extern "fastcall" {
     pub(crate) fn GetLibraryDesc() -> &'static LibraryDesc;
@@ -1014,6 +1248,11 @@ extern "fastcall" {
     pub(crate) fn DestroyInstance(instance: *mut c_void);
     pub(crate) fn GetInstanceDesc(instance: *mut c_void) -> *const InstanceDesc;
     pub(crate) fn SetCommonSettings(instance: *mut c_void, settings: &CommonSettings) -> Result;
+    pub(crate) fn SetDenoiserSettings(
+        instance: *mut c_void,
+        identifier: Identifier,
+        denoiserSettings: *const c_void,
+    ) -> Result;
     pub(crate) fn GetComputeDispatches(
         instance: *mut c_void,
         identifiers: *const Identifier,

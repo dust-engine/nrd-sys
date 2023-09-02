@@ -47,6 +47,14 @@ mod allocator {
     }
 }
 
+pub trait DenoiserSettings {}
+impl DenoiserSettings for ffi::ReblurSettings {}
+impl DenoiserSettings for ffi::RelaxDiffuseSettings {}
+impl DenoiserSettings for ffi::RelaxDiffuseSpecularSettings {}
+impl DenoiserSettings for ffi::RelaxSpecularSettings {}
+impl DenoiserSettings for ffi::ReferenceSettings {}
+impl DenoiserSettings for ffi::SigmaSettings {}
+
 pub struct Instance(*mut c_void);
 impl Instance {
     pub fn library_desc() -> &'static ffi::LibraryDesc {
@@ -90,6 +98,21 @@ impl Instance {
             }
         }
     }
+    pub fn set_denoiser_settings<T>(
+        &mut self,
+        identifier: ffi::Identifier,
+        reblur_settings: &T,
+    ) -> Result<(), ffi::Result> {
+        unsafe {
+            ffi::SetDenoiserSettings(
+                self.0,
+                identifier,
+                reblur_settings as *const _ as *const c_void,
+            )
+            .ok(())
+        }
+    }
+
     pub fn get_compute_dispatches(
         &mut self,
         identifiers: &[ffi::Identifier],
