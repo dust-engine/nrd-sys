@@ -49,6 +49,9 @@ mod allocator {
 
 pub struct Instance(*mut c_void);
 impl Instance {
+    pub fn library_desc() -> &'static ffi::LibraryDesc {
+        unsafe { ffi::GetLibraryDesc() }
+    }
     pub fn new(denoisers: &[ffi::DenoiserDesc]) -> Result<Self, ffi::Result> {
         let desc = ffi::InstanceCreationDesc {
             memory_allocator_interface: ffi::MemoryAllocatorInterface {
@@ -83,6 +86,29 @@ impl Instance {
             let result = ffi::SetCommonSettings(self.0, settings);
             match result {
                 ffi::Result::Success => Ok(()),
+                _ => Err(result),
+            }
+        }
+    }
+    pub fn get_compute_dispatches(
+        &mut self,
+        identifiers: &[ffi::Identifier],
+    ) -> Result<&[ffi::DispatchDesc], ffi::Result> {
+        unsafe {
+            let mut dispatches: *const ffi::DispatchDesc = std::ptr::null();
+            let mut dispatches_count: u32 = 0;
+            let result = ffi::GetComputeDispatches(
+                self.0,
+                identifiers.as_ptr(),
+                identifiers.len() as u32,
+                &mut dispatches,
+                &mut dispatches_count,
+            );
+            match result {
+                ffi::Result::Success => Ok(std::slice::from_raw_parts(
+                    dispatches,
+                    dispatches_count as usize,
+                )),
                 _ => Err(result),
             }
         }

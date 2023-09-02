@@ -540,6 +540,153 @@ pub struct CommonSettings {
     enable_validation: bool,
 }
 
+#[repr(u32)]
+#[allow(non_camel_case_types)]
+pub enum ResourceType {
+    //=============================================================================================================================
+    // COMMON INPUTS
+    //=============================================================================================================================
+
+    // 3D world-space motion (RGBA16f+) or 2D screen-space motion (RG16f+), MVs must be non-jittered, MV = previous - current
+    IN_MV,
+
+    // Data must match encoding in "NRD_FrontEnd_PackNormalAndRoughness" and "NRD_FrontEnd_UnpackNormalAndRoughness" (RGBA8+)
+    IN_NORMAL_ROUGHNESS,
+
+    // Linear view depth for primary rays (R16f+)
+    IN_VIEWZ,
+
+    //=============================================================================================================================
+    // INPUTS
+    //=============================================================================================================================
+
+    // Noisy radiance and hit distance (RGBA16f+)
+    //      REBLUR: use "REBLUR_FrontEnd_PackRadianceAndNormHitDist" for encoding
+    //      RELAX: use "RELAX_FrontEnd_PackRadianceAndHitDist" for encoding
+    IN_DIFF_RADIANCE_HITDIST,
+    IN_SPEC_RADIANCE_HITDIST,
+
+    // Noisy hit distance (R8+)
+    //      REBLUR: use "REBLUR_FrontEnd_GetNormHitDist" for encoding
+    IN_DIFF_HITDIST,
+    IN_SPEC_HITDIST,
+
+    // Noisy bent normal and normalized hit distance (RGBA8+)
+    //      REBLUR: use "REBLUR_FrontEnd_PackDirectionalOcclusion" for encoding
+    IN_DIFF_DIRECTION_HITDIST,
+
+    // Noisy SH data (2x RGBA16f+)
+    //      REBLUR: use "REBLUR_FrontEnd_PackSh" for encoding
+    //      RELAX: use "RELAX_FrontEnd_PackSh" for encoding
+    IN_DIFF_SH0,
+    IN_DIFF_SH1,
+    IN_SPEC_SH0,
+    IN_SPEC_SH1,
+
+    // (Optional) User-provided history confidence in range 0-1, i.e. antilag (R8+)
+    // Used only if "CommonSettings::isHistoryConfidenceAvailable = true"
+    IN_DIFF_CONFIDENCE,
+    IN_SPEC_CONFIDENCE,
+
+    // (Optional) User-provided disocclusion threshold selector in range 0-1 (R8+)
+    // Disocclusion threshold is mixed between "disocclusionThreshold" and "disocclusionThresholdAlternate"
+    // Used only if "CommonSettings::isDisocclusionThresholdMixAvailable = true"
+    IN_DISOCCLUSION_THRESHOLD_MIX,
+
+    // (Optional) Base color (can be decoupled to diffuse and specular albedo based on metalness) and metalness (RGBA8+)
+    // Used only if "CommonSettings::isBaseColorMetalnessAvailable = true"
+    IN_BASECOLOR_METALNESS,
+
+    // Noisy shadow data and optional translucency (RG16f+ and RGBA8+ for optional translucency)
+    //      SIGMA: use "SIGMA_FrontEnd_PackShadow" for encoding
+    IN_SHADOWDATA,
+    IN_SHADOW_TRANSLUCENCY,
+
+    // Noisy signal (R8+)
+    IN_RADIANCE,
+
+    // Primary and secondary world-space positions (RGBA16f+)
+    IN_DELTA_PRIMARY_POS,
+    IN_DELTA_SECONDARY_POS,
+
+    //=============================================================================================================================
+    // OUTPUTS
+    //=============================================================================================================================
+
+    // IMPORTANT: These textures can be potentially used as history buffers!
+    // IMPORTANT: Most of denoisers do not write into output pixels outside of "CommonSettings::denoisingRange"!
+
+    // Denoised radiance and hit distance
+    //      REBLUR: use "REBLUR_BackEnd_UnpackRadianceAndNormHitDist" for decoding (RGBA16f+)
+    //      RELAX: use "RELAX_BackEnd_UnpackRadiance" for decoding (R11G11B10f+)
+    OUT_DIFF_RADIANCE_HITDIST,
+    OUT_SPEC_RADIANCE_HITDIST,
+
+    // Denoised SH data
+    //      REBLUR: use "REBLUR_BackEnd_UnpackSh" for decoding (2x RGBA16f+)
+    //      RELAX: use "RELAX_BackEnd_UnpackSh" for decoding (2x RGBA16f+)
+    OUT_DIFF_SH0,
+    OUT_DIFF_SH1,
+    OUT_SPEC_SH0,
+    OUT_SPEC_SH1,
+
+    // Denoised normalized hit distance (R8+)
+    OUT_DIFF_HITDIST,
+    OUT_SPEC_HITDIST,
+
+    // Denoised bent normal and normalized hit distance (RGBA8+)
+    //      REBLUR: use "REBLUR_BackEnd_UnpackDirectionalOcclusion" for decoding
+    OUT_DIFF_DIRECTION_HITDIST,
+
+    // Denoised shadow and optional transcluceny (R8+ or RGBA8+)
+    //      SIGMA: use "SIGMA_BackEnd_UnpackShadow" for decoding
+    OUT_SHADOW_TRANSLUCENCY,
+
+    // Denoised signal
+    OUT_RADIANCE,
+
+    // 2D screen-space specular motion (RG16f+), MV = previous - current
+    OUT_REFLECTION_MV,
+
+    // 2D screen-space refraction motion (RG16f+), MV = previous - current
+    OUT_DELTA_MV,
+
+    // (Optional) Debug output (RGBA8+), .w = transparency
+    // Used if "CommonSettings::enableValidation = true"
+    OUT_VALIDATION,
+
+    //=============================================================================================================================
+    // POOLS
+    //=============================================================================================================================
+
+    // Can be reused after denoising
+    TRANSIENT_POOL,
+
+    // Dedicated to NRD, can't be reused
+    PERMANENT_POOL,
+}
+
+#[repr(C)]
+struct ResourceDesc {
+    state_needed: DescriptorType,
+    ty: ResourceType,
+    index_in_pool: u16,
+    mip_offset: u16,
+    mip_num: u16,
+}
+
+#[repr(C)]
+pub struct DispatchDesc {
+    name: *const c_char,
+    resources: *const ResourceDesc,
+    resources_num: u32,
+    constant_buffer_data: *const u8,
+    constant_buffer_data_size: u32,
+    pipeline_index: u16,
+    grid_width: u16,
+    grid_height: u16,
+}
+
 #[allow(non_snake_case)]
 extern "fastcall" {
     pub(crate) fn GetLibraryDesc() -> &'static LibraryDesc;
@@ -548,4 +695,11 @@ extern "fastcall" {
     pub(crate) fn DestroyInstance(instance: *mut c_void);
     pub(crate) fn GetInstanceDesc(instance: *mut c_void) -> *const InstanceDesc;
     pub(crate) fn SetCommonSettings(instance: *mut c_void, settings: &CommonSettings) -> Result;
+    pub(crate) fn GetComputeDispatches(
+        instance: *mut c_void,
+        identifiers: *const Identifier,
+        identifiers_num: u32,
+        descs: &mut *const DispatchDesc,
+        descs_num: &mut u32,
+    ) -> Result;
 }
