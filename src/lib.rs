@@ -1,10 +1,6 @@
 #![feature(allocator_api)]
 
-use std::{
-    alloc::{AllocError, Allocator, Layout},
-    ffi::c_void,
-    ptr::NonNull,
-};
+use std::ffi::c_void;
 
 pub mod ffi;
 
@@ -17,7 +13,6 @@ mod allocator {
         size: usize,
         alignment: usize,
     ) -> *mut c_void {
-        println!("Allocated {} {}", size, alignment);
         unsafe {
             match std::alloc::Global.allocate(Layout::from_size_align_unchecked(size, alignment)) {
                 Ok(ptr) => ptr.as_ptr() as *mut c_void,
@@ -33,24 +28,28 @@ mod allocator {
         new_size: usize,
         new_alignment: usize,
     ) -> *mut c_void {
-        println!("Reallocated");
         free(user_arg, memory, old_size, old_alignment);
         allocate(user_arg, new_size, new_alignment)
     }
-    pub extern "C" fn free(_user_arg: *const c_void, memory: *mut c_void, size: usize, alignment: usize) {
-        println!("Freed {} {}", size, alignment);
+    pub extern "C" fn free(
+        _user_arg: *const c_void,
+        memory: *mut c_void,
+        size: usize,
+        alignment: usize,
+    ) {
         let memory = NonNull::new(memory).unwrap();
         unsafe {
-            std::alloc::Global.deallocate(memory.cast(), Layout::from_size_align_unchecked(size, alignment))
+            std::alloc::Global.deallocate(
+                memory.cast(),
+                Layout::from_size_align_unchecked(size, alignment),
+            )
         }
     }
 }
 
 pub struct Instance(*mut c_void);
 impl Instance {
-    pub fn new(
-        denoisers: &[ffi::DenoiserDesc],
-    ) -> Result<Self, ffi::Result> {
+    pub fn new(denoisers: &[ffi::DenoiserDesc]) -> Result<Self, ffi::Result> {
         let desc = ffi::InstanceCreationDesc {
             memory_allocator_interface: ffi::MemoryAllocatorInterface {
                 allocate: allocator::allocate,
@@ -66,6 +65,13 @@ impl Instance {
         match result {
             ffi::Result::Success => Ok(Self(ptr)),
             _ => Err(result),
+        }
+    }
+
+    pub fn desc(&self) -> &ffi::InstanceDesc {
+        unsafe {
+            let ptr = ffi::GetInstanceDesc(self.0);
+            &*ptr
         }
     }
 }

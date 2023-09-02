@@ -1,4 +1,7 @@
-use std::{ffi::c_void, fmt::Debug};
+use std::{
+    ffi::{c_char, c_void},
+    fmt::Debug,
+};
 
 #[repr(C)]
 #[derive(Debug)]
@@ -219,7 +222,8 @@ pub struct DenoiserDesc {
 
 #[repr(C)]
 pub(crate) struct MemoryAllocatorInterface {
-    pub(crate) allocate: extern "C" fn(user_arg: *const c_void, size: usize, alignment: usize) -> *mut c_void,
+    pub(crate) allocate:
+        extern "C" fn(user_arg: *const c_void, size: usize, alignment: usize) -> *mut c_void,
     pub(crate) reallocate: extern "C" fn(
         user_arg: *const c_void,
         memory: *mut c_void,
@@ -228,7 +232,8 @@ pub(crate) struct MemoryAllocatorInterface {
         new_size: usize,
         new_alignment: usize,
     ) -> *mut c_void,
-    pub(crate) free: extern "C" fn(user_arg: *const c_void, memory: *mut c_void, size: usize, alignment: usize),
+    pub(crate) free:
+        extern "C" fn(user_arg: *const c_void, memory: *mut c_void, size: usize, alignment: usize),
     pub(crate) user_arg: *const c_void,
 }
 
@@ -239,9 +244,219 @@ pub(crate) struct InstanceCreationDesc {
     pub denoisers_num: u32,
 }
 
+#[repr(u32)]
+#[derive(Debug)]
+pub enum Sampler {
+    NearestClamp,
+    NearestMirroredRepeat,
+    LinearClamp,
+    LinearMirroredRepeat,
+
+    MaxNum,
+}
+
+#[repr(C)]
+#[derive(Debug)]
+pub struct ComputeShaderDesc {
+    bytecode: *const c_void,
+    size: u64,
+}
+
+#[repr(u32)]
+pub enum DescriptorType {
+    // read-only, SRV
+    Texture,
+
+    // read-write, UAV
+    StorageTexture,
+}
+
+#[repr(C)]
+struct ResourceRangeDesc {
+    descriptor_type: DescriptorType,
+    base_register_index: u32,
+    descriptors_num: u32,
+}
+
+#[repr(u32)]
+#[derive(Debug)]
+#[allow(non_camel_case_types)]
+pub enum Format {
+    R8_UNORM,
+    R8_SNORM,
+    R8_UINT,
+    R8_SINT,
+
+    RG8_UNORM,
+    RG8_SNORM,
+    RG8_UINT,
+    RG8_SINT,
+
+    RGBA8_UNORM,
+    RGBA8_SNORM,
+    RGBA8_UINT,
+    RGBA8_SINT,
+    RGBA8_SRGB,
+
+    R16_UNORM,
+    R16_SNORM,
+    R16_UINT,
+    R16_SINT,
+    R16_SFLOAT,
+
+    RG16_UNORM,
+    RG16_SNORM,
+    RG16_UINT,
+    RG16_SINT,
+    RG16_SFLOAT,
+
+    RGBA16_UNORM,
+    RGBA16_SNORM,
+    RGBA16_UINT,
+    RGBA16_SINT,
+    RGBA16_SFLOAT,
+
+    R32_UINT,
+    R32_SINT,
+    R32_SFLOAT,
+
+    RG32_UINT,
+    RG32_SINT,
+    RG32_SFLOAT,
+
+    RGB32_UINT,
+    RGB32_SINT,
+    RGB32_SFLOAT,
+
+    RGBA32_UINT,
+    RGBA32_SINT,
+    RGBA32_SFLOAT,
+
+    R10_G10_B10_A2_UNORM,
+    R10_G10_B10_A2_UINT,
+    R11_G11_B10_UFLOAT,
+    R9_G9_B9_E5_UFLOAT,
+}
+
+#[repr(C)]
+#[derive(Debug)]
+pub struct PipelineDesc {
+    pub compute_shader_dxbc: ComputeShaderDesc,
+    pub compute_shader_dxil: ComputeShaderDesc,
+    pub compute_shader_spirv: ComputeShaderDesc,
+    shader_file_name: *const c_char,
+    shader_entry_point_name: *const c_char,
+    resource_ranges: *const ResourceRangeDesc,
+    resource_ranges_num: u32,
+    pub has_constant_data: bool,
+}
+
+#[repr(C)]
+#[derive(Debug)]
+pub struct TextureDesc {
+    pub format: Format,
+    pub width: u16,
+    pub height: u16,
+    pub mip_num: u16,
+}
+
+#[repr(C)]
+#[derive(Debug)]
+struct DescriptorPoolDesc {
+    sets_max_num: u32,
+    constant_buffers_max_num: u32,
+    samplers_max_num: u32,
+    textures_max_num: u32,
+    storage_textures_max_num: u32,
+}
+
+#[repr(C)]
+pub struct InstanceDesc {
+    // Constant buffer (shared)
+    constant_buffer_max_data_size: u32,
+    constant_buffer_space_index: u32,
+    constant_buffer_register_index: u32,
+
+    // Samplers (shared)
+    samplers: *const Sampler,
+    samplers_num: u32,
+    samplers_space_index: u32,
+    samplers_base_register_index: u32,
+
+    // Pipelines
+    // - if "PipelineDesc::hasConstantData = true" a pipeline has a constant buffer with the shared description
+    // - if "samplers" are used as static/immutable samplers, "DescriptorPoolDesc::samplerMaxNum" is not needed (it counts samplers across all dispatches)
+    pipelines: *const PipelineDesc,
+    pipelines_num: u32,
+    resources_space_index: u32,
+
+    // Textures
+    permanent_pool: *const TextureDesc,
+    permanent_pool_size: u32,
+    transient_pool: *const TextureDesc,
+    transient_pool_size: u32,
+
+    // Limits
+    descriptor_pool_desc: DescriptorPoolDesc,
+}
+impl InstanceDesc {
+    pub fn samplers(&self) -> &[Sampler] {
+        unsafe {
+            std::slice::from_raw_parts(self.samplers, self.samplers_num as usize)
+        }
+    }
+    pub fn pipelines(&self) -> &[PipelineDesc] {
+        unsafe {
+            std::slice::from_raw_parts(self.pipelines, self.pipelines_num as usize)
+        }
+    }
+    pub fn permanent_pool(&self) -> &[TextureDesc] {
+        unsafe {
+            std::slice::from_raw_parts(self.permanent_pool, self.permanent_pool_size as usize)
+        }
+    }
+    pub fn transient_pool(&self) -> &[TextureDesc] {
+        unsafe {
+            std::slice::from_raw_parts(self.transient_pool, self.transient_pool_size as usize)
+        }
+    }
+}
+
+impl Debug for InstanceDesc {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("InstanceDesc")
+            .field(
+                "constant_buffer_max_data_size",
+                &self.constant_buffer_max_data_size,
+            )
+            .field(
+                "constant_buffer_space_index",
+                &self.constant_buffer_space_index,
+            )
+            .field(
+                "constant_buffer_register_index",
+                &self.constant_buffer_register_index,
+            )
+            .field("samplers", &self.samplers())
+            .field("samplers_space_index", &self.samplers_space_index)
+            .field(
+                "samplers_base_register_index",
+                &self.samplers_base_register_index,
+            )
+            .field("pipelines", &self.pipelines())
+            .field("resources_space_index", &self.resources_space_index)
+            .field("permanent_pool", &self.permanent_pool())
+            .field("transient_pool", &self.transient_pool())
+            .field("descriptor_pool_desc", &self.descriptor_pool_desc)
+            .finish()
+    }
+}
+
 #[allow(non_snake_case)]
 extern "fastcall" {
     pub(crate) fn GetLibraryDesc() -> &'static LibraryDesc;
-    pub(crate) fn CreateInstance(desc: &InstanceCreationDesc, instance: &mut *mut c_void) -> Result;
+    pub(crate) fn CreateInstance(desc: &InstanceCreationDesc, instance: &mut *mut c_void)
+        -> Result;
     pub(crate) fn DestroyInstance(instance: *mut c_void);
+    pub(crate) fn GetInstanceDesc(instance: *mut c_void) -> *const InstanceDesc;
 }
