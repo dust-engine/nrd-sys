@@ -1,4 +1,4 @@
 fn main() {
-    let desc = unsafe { nrd::ffi::GetLibraryDesc() };
-    println!("{:#?}", desc);
+    let instance = nrd::Instance::new(&[]).unwrap();
+    
 }

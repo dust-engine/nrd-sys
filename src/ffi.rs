@@ -1,4 +1,4 @@
-use std::fmt::Debug;
+use std::{ffi::c_void, fmt::Debug};
 
 #[repr(C)]
 #[derive(Debug)]
@@ -128,8 +128,6 @@ pub enum Denoiser {
     // INPUTS - IN_MV, IN_DELTA_PRIMARY_POS, IN_DELTA_SECONDARY_POS
     // OUTPUT - OUT_DELTA_MV
     SpecularDeltaMv,
-
-    MaxNum,
 }
 
 #[repr(u8)]
@@ -145,8 +143,6 @@ pub enum NormalEncoding {
     // Best IQ on curved (not bumpy) surfaces
     Rgba16Unorm,
     Rgba16Snorm, // can be used with FP formats
-
-    MaxNum,
 }
 
 /// NRD_ROUGHNESS_ENCODING variants
@@ -161,8 +157,6 @@ pub enum RoughnessEncoding {
 
     // Sqrt(linear roughness)
     SqrtLinear,
-
-    MaxNum,
 }
 
 #[repr(C)]
@@ -202,7 +196,52 @@ impl Debug for LibraryDesc {
     }
 }
 
+#[repr(u32)]
+#[derive(Debug)]
+pub enum Result {
+    Success,
+    Failure,
+    InvalidArgument,
+    Unsupported,
+    NonUniqueIdentifier,
+}
+
+#[repr(transparent)]
+pub struct Identifier(u32);
+
+#[repr(C)]
+pub struct DenoiserDesc {
+    identifier: u32,
+    denoiser: Denoiser,
+    render_width: u16,
+    render_height: u16,
+}
+
+#[repr(C)]
+pub(crate) struct MemoryAllocatorInterface {
+    pub(crate) allocate: extern "C" fn(user_arg: *const c_void, size: usize, alignment: usize) -> *mut c_void,
+    pub(crate) reallocate: extern "C" fn(
+        user_arg: *const c_void,
+        memory: *mut c_void,
+        old_size: usize,
+        old_alignment: usize,
+        new_size: usize,
+        new_alignment: usize,
+    ) -> *mut c_void,
+    pub(crate) free: extern "C" fn(user_arg: *const c_void, memory: *mut c_void, size: usize, alignment: usize),
+    pub(crate) user_arg: *const c_void,
+}
+
+#[repr(C)]
+pub(crate) struct InstanceCreationDesc {
+    pub memory_allocator_interface: MemoryAllocatorInterface,
+    pub denoisers: *const DenoiserDesc,
+    pub denoisers_num: u32,
+}
+
 #[allow(non_snake_case)]
 extern "fastcall" {
-    pub fn GetLibraryDesc() -> &'static LibraryDesc;
+    pub(crate) fn GetLibraryDesc() -> &'static LibraryDesc;
+    pub(crate) fn CreateInstance(desc: &InstanceCreationDesc, instance: &mut *mut c_void) -> Result;
+    pub(crate) fn DestroyInstance(instance: *mut c_void);
 }
