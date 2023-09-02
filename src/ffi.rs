@@ -667,7 +667,7 @@ pub enum ResourceType {
 }
 
 #[repr(C)]
-struct ResourceDesc {
+pub struct ResourceDesc {
     state_needed: DescriptorType,
     ty: ResourceType,
     index_in_pool: u16,
@@ -685,6 +685,325 @@ pub struct DispatchDesc {
     pipeline_index: u16,
     grid_width: u16,
     grid_height: u16,
+}
+
+#[repr(C)]
+pub struct HitDistanceParameters {
+    // (units) - constant value
+    // IMPORTANT: if your unit is not "meter", you must convert it from "meters" to "units" manually!
+    pub a: f32,
+
+    // (> 0) - viewZ based linear scale (1 m - 10 cm, 10 m - 1 m, 100 m - 10 m)
+    pub b: f32,
+
+    // (>= 1) - roughness based scale, use values > 1 to get bigger hit distance for low roughness
+    pub c: f32,
+
+    // (<= 0) - absolute value should be big enough to collapse "exp2( D * roughness ^ 2 )" to "~0" for roughness = 1
+    pub d: f32,
+}
+
+// Antilag logic:
+//    delta = ( abs( old - new ) - localVariance * sigmaScale ) / ( max( old, new ) + localVariance * sigmaScale + sensitivityToDarkness )
+//    delta = LinearStep( thresholdMax, thresholdMin, delta )
+//        - 1 - keep accumulation
+//        - 0 - history reset
+#[repr(C)]
+pub struct AntilagIntensitySettings {
+    // (normalized %) - must be big enough to almost ignore residual noise (boiling), default is tuned for 0.5rpp in general
+    pub threshold_min: f32,
+
+    // (normalized %) - max > min, usually 3-5x times greater than min
+    pub threshold_max: f32,
+
+    // (> 0) - real delta is reduced by local variance multiplied by this value
+    pub sigma_scale: f32,
+
+    // (intensity units) - bigger values make antilag less sensitive to lightness fluctuations in dark places
+    pub sensitivity_to_darkness: f32, // IMPORTANT: 0 is a bad default
+
+    // Ideally, must be enabled, but since "sensitivityToDarkness" requires fine tuning from the app side it is disabled by default
+    pub enable: bool, // IMPORTANT: doesn't affect "occlusion" denoisers
+}
+
+#[repr(C)]
+pub struct AntilagHitDistanceSettings {
+    // (normalized %) - must almost ignore residual noise (boiling), default is tuned for 0.5rpp for the worst case
+    pub threshold_min: f32,
+
+    // (normalized %) - max > min, usually 2-4x times greater than min
+    pub threshold_max: f32,
+
+    // (> 0) - real delta is reduced by local variance multiplied by this value
+    pub sigma_scale: f32,
+
+    // (0; 1] - hit distances are normalized
+    pub sensitivity_to_darkness: f32,
+
+    // Enabled by default
+    pub enable: bool,
+}
+
+#[repr(u8)]
+pub enum CheckerboardMode {
+    OFF,
+    BLACK,
+    WHITE,
+}
+
+#[repr(u8)]
+pub enum HitDistanceReconstructionMode {
+    // Probabilistic split at primary hit is not used, hence hit distance is always valid (reconstruction is not needed)
+    OFF,
+
+    // If hit distance is invalid due to probabilistic sampling, reconstruct using 3x3 neighbors.
+    // Probability at primary hit must be clamped to [1/4; 3/4] range to guarantee a sample in this area
+    Area3x3,
+
+    // If hit distance is invalid due to probabilistic sampling, reconstruct using 5x5 neighbors.
+    // Probability at primary hit must be clamped to [1/16; 15/16] range to guarantee a sample in this area
+    Area5x5,
+}
+#[repr(C)]
+pub struct ReblurSettings {
+    pub hit_distance_parameters: HitDistanceParameters,
+    pub antilag_intensity_settings: AntilagIntensitySettings,
+    pub antilag_hit_distance_settings: AntilagHitDistanceSettings,
+
+    // [0; REBLUR_MAX_HISTORY_FRAME_NUM] - maximum number of linearly accumulated frames (= FPS * "time of accumulation")
+    pub max_accumulated_frame_num: u32,
+
+    // [0; REBLUR_MAX_HISTORY_FRAME_NUM] - maximum number of linearly accumulated frames in fast history (less than "maxAccumulatedFrameNum")
+    pub max_fast_accumulated_frame_num: u32,
+
+    // [0; REBLUR_MAX_HISTORY_FRAME_NUM] - number of reconstructed frames after history reset (less than "maxFastAccumulatedFrameNum")
+    pub history_fix_frame_num: u32,
+
+    // (pixels) - pre-accumulation spatial reuse pass blur radius (0 = disabled, must be used in case of probabilistic sampling)
+    pub diffuse_prepass_blur_radius: f32,
+    pub specular_prepass_blur_radius: f32,
+
+    // (pixels) - base denoising radius (30 is a baseline for 1440p)
+    pub blur_radius: f32,
+
+    // (pixels) - base stride between samples in history reconstruction pass
+    pub history_fix_stride_between_samples: f32,
+
+    // (normalized %) - base fraction of diffuse or specular lobe angle used to drive normal based rejection
+    pub lobe_angle_fraction: f32,
+
+    // (normalized %) - base fraction of center roughness used to drive roughness based rejection
+    pub roughness_fraction: f32,
+
+    // [0; 1] - if roughness < this, temporal accumulation becomes responsive and driven by roughness (useful for animated water)
+    pub responsive_accumulation_roughness_threshold: f32,
+
+    // (normalized %) - stabilizes output, more stabilization improves antilag (clean signals can use lower values)
+    pub stabilization_strength: f32,
+
+    // (normalized %) - represents maximum allowed deviation from local tangent plane
+    pub plane_distance_sensitivity: f32,
+
+    // IN_MV = lerp(IN_MV, specularMotion, smoothstep(specularProbabilityThresholdsForMvModification[0], specularProbabilityThresholdsForMvModification[1], specularProbability))
+    pub specular_probability_thresholds_for_mv_modification: [f32; 2],
+
+    // If not OFF and used for DIFFUSE_SPECULAR, defines diffuse orientation, specular orientation is the opposite
+    pub checkerboard_mode: CheckerboardMode,
+
+    // Must be used only in case of probabilistic sampling (not checkerboarding), when a pixel can be skipped and have "0" (invalid) hit distance
+    pub hit_distance_reconstruction_mode: HitDistanceReconstructionMode,
+
+    // Adds bias in case of badly defined signals, but tries to fight with fireflies
+    pub enable_anti_firefly: bool,
+
+    // Turns off spatial filtering and virtual motion based specular tracking
+    pub enable_reference_accumulation: bool,
+
+    // Boosts performance by sacrificing IQ
+    pub enable_performance_mode: bool,
+
+    // Spatial passes do optional material index comparison as: ( materialEnabled ? material[ center ] == material[ sample ] : 1 )
+    pub enable_material_test_for_diffuse: bool,
+    pub enable_material_test_for_specular: bool,
+}
+
+#[repr(C)]
+pub struct SigmaSettings {
+    // (normalized %) - represents maximum allowed deviation from local tangent plane
+    pub plane_distance_sensitivity: f32,
+
+    // [1; 3] - adds bias and stability if > 1
+    pub blur_radius_scale: f32,
+}
+
+// RELAX_DIFFUSE_SPECULAR
+#[repr(C)]
+
+pub struct RelaxDiffuseSpecularSettings {
+    // (pixels) - pre-accumulation spatial reuse pass blur radius (0 = disabled, must be used in case of probabilistic sampling)
+    pub diffuse_prepass_blur_radius: f32,
+    pub specular_prepass_blur_radius: f32,
+
+    // [0; RELAX_MAX_HISTORY_FRAME_NUM] - maximum number of linearly accumulated frames ( = FPS * "time of accumulation")
+    pub diffuse_max_accumulated_frame_num: u32,
+    pub specular_max_accumulated_frame_num: u32,
+
+    // [0; RELAX_MAX_HISTORY_FRAME_NUM] - maximum number of linearly accumulated frames in fast history (less than "maxAccumulatedFrameNum")
+    pub diffuse_max_fast_accumulated_frame_num: u32,
+    pub specular_max_fast_accumulated_frame_num: u32,
+
+    // [0; RELAX_MAX_HISTORY_FRAME_NUM] - number of reconstructed frames after history reset (less than "maxFastAccumulatedFrameNum")
+    pub history_fix_frame_num: u32,
+
+    // A-trous edge stopping Luminance sensitivity
+    pub diffuse_phi_luminance: f32,
+    pub specular_phi_luminance: f32,
+
+    // (normalized %) - base fraction of diffuse or specular lobe angle used to drive normal based rejection
+    pub diffuse_lobe_angle_fraction: f32,
+    pub specular_lobe_angle_fraction: f32,
+
+    // (normalized %) - base fraction of center roughness used to drive roughness based rejection
+    pub roughness_fraction: f32,
+
+    // (>= 0) - how much variance we inject to specular if reprojection confidence is low
+    pub specular_variance_boost: f32,
+
+    // (degrees) - slack for the specular lobe angle used in normal based rejection of specular during A-Trous passes
+    pub specular_lobe_angle_slack: f32,
+
+    // (pixels) - base stride between samples in history reconstruction pass
+    pub history_fix_stride_between_samples: f32,
+
+    // (> 0) - normal edge stopper for history reconstruction pass
+    pub history_fix_edge_stopping_normal_power: f32,
+
+    // [1; 3] - standard deviation scale of color box for clamping main "slow" history to responsive "fast" history
+    pub history_clamping_color_box_sigma_scale: f32,
+
+    // (>= 0) - history length threshold below which spatial variance estimation will be executed
+    pub spatial_variance_estimation_history_threshold: u32,
+
+    // [2; 8] - number of iteration for A-Trous wavelet transform
+    pub atrous_iteration_num: u32,
+
+    // [0; 1] - A-trous edge stopping Luminance weight minimum
+    pub diffuse_min_luminance_weight: f32,
+    pub specular_min_luminance_weight: f32,
+
+    // (normalized %) - Depth threshold for spatial passes
+    pub depth_threshold: f32,
+
+    // Confidence inputs can affect spatial blurs, relaxing some weights in areas with low confidence
+    pub confidence_driven_relaxation_multiplier: f32,
+    pub confidence_driven_luminance_edge_stopping_relaxation: f32,
+    pub confidence_driven_normal_edge_stopping_relaxation: f32,
+
+    // How much we relax roughness based rejection for spatial filter in areas where specular reprojection is low
+    pub luminance_edge_stopping_relaxation: f32,
+    pub normal_edge_stopping_relaxation: f32,
+
+    // How much we relax rejection for spatial filter based on roughness and view vector
+    pub roughness_edge_stopping_relaxation: f32,
+
+    // If not OFF and used for DIFFUSE_SPECULAR, defines diffuse orientation, specular orientation is the opposite
+    pub checkerboard_mode: CheckerboardMode,
+
+    // Must be used only in case of probabilistic sampling (not checkerboarding), when a pixel can be skipped and have "0" (invalid) hit distance
+    pub hit_distance_reconstruction_mode: HitDistanceReconstructionMode,
+
+    // Firefly suppression
+    pub enable_anti_firefly: bool,
+
+    // Skip reprojection test when there is no motion, might improve quality along the edges for static camera with a jitter
+    pub enable_reprojection_test_skipping_without_motion: bool,
+
+    // Roughness based rejection
+    pub enable_roughness_edge_stopping: bool,
+
+    // Spatial passes do optional material index comparison as: ( materialEnabled ? material[ center ] == material[ sample ] : 1 )
+    pub enable_material_test_for_diffuse: bool,
+    pub enable_material_test_for_specular: bool,
+}
+
+// RELAX_DIFFUSE
+
+#[repr(C)]
+pub struct RelaxDiffuseSettings {
+    pub prepass_blur_radius: f32,
+
+    pub diffuse_max_accumulated_frame_num: u32,
+    pub diffuse_max_fast_accumulated_frame_num: u32,
+    pub history_fix_frame_num: u32,
+
+    pub diffuse_phi_luminance: f32,
+    pub diffuse_lobe_angle_fraction: f32,
+
+    pub history_fix_edge_stopping_normal_power: f32,
+    pub history_fix_stride_between_samples: f32,
+
+    pub history_clamping_color_box_sigma_scale: f32,
+
+    pub spatial_variance_estimation_history_threshold: u32,
+    pub atrous_iteration_num: u32,
+    pub min_luminance_weight: f32,
+    pub depth_threshold: f32,
+
+    pub confidence_driven_relaxation_multiplier: f32,
+    pub confidence_driven_luminance_edge_stopping_relaxation: f32,
+    pub confidence_driven_normal_edge_stopping_relaxation: f32,
+
+    pub checkerboard_mode: CheckerboardMode,
+    pub hit_distance_reconstruction_mode: HitDistanceReconstructionMode,
+
+    pub enable_anti_firefly: bool,
+    pub enable_reprojection_test_skipping_without_motion: bool,
+    pub enable_material_test: bool,
+}
+
+// RELAX_SPECULAR
+
+#[repr(C)]
+pub struct RelaxSpecularSettings {
+    pub prepass_blur_radius: f32,
+
+    pub specular_max_accumulated_frame_num: u32,
+    pub specular_max_fast_accumulated_frame_num: u32,
+    pub history_fix_frame_num: u32,
+
+    pub specular_phi_luminance: f32,
+    pub diffuse_lobe_angle_fraction: f32,
+    pub specular_lobe_angle_fraction: f32,
+    pub roughness_fraction: f32,
+
+    pub specular_variance_boost: f32,
+    pub specular_lobe_angle_slack: f32,
+
+    pub history_fix_edge_stopping_normal_power: f32,
+    pub history_fix_stride_between_samples: f32,
+
+    pub history_clamping_color_box_sigma_scale: f32,
+
+    pub spatial_variance_estimation_history_threshold: u32,
+    pub atrous_iteration_num: u32,
+    pub min_luminance_weight: f32,
+    pub depth_threshold: f32,
+
+    pub confidence_driven_relaxation_multiplier: f32,
+    pub confidence_driven_luminance_edge_stopping_relaxation: f32,
+    pub confidence_driven_normal_edge_stopping_relaxation: f32,
+
+    pub luminance_edge_stopping_relaxation: f32,
+    pub normal_edge_stopping_relaxation: f32,
+    pub roughness_edge_stopping_relaxation: f32,
+
+    pub checkerboard_mode: CheckerboardMode,
+    pub hit_distance_reconstruction_mode: HitDistanceReconstructionMode,
+
+    pub enable_anti_firefly: bool,
+    pub enable_reprojection_test_skipping_without_motion: bool,
+    pub enable_roughness_edge_stopping: bool,
+    pub enable_material_test: bool,
 }
 
 #[allow(non_snake_case)]
