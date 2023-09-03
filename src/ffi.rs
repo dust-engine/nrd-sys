@@ -1,6 +1,5 @@
 use std::{
-    default,
-    ffi::{c_char, c_void},
+    ffi::{c_char, c_void, CStr},
     fmt::Debug,
 };
 
@@ -119,7 +118,7 @@ pub enum Denoiser {
 
     // INPUTS - IN_RADIANCE
     // OUTPUTS - OUT_RADIANCE
-    REFERENCE,
+    Reference,
 
     // =============================================================================================================================
     // MOTION VECTORS
@@ -220,14 +219,15 @@ impl Result {
 }
 
 #[repr(transparent)]
-pub struct Identifier(u32);
+#[derive(Clone, Copy, Debug)]
+pub struct Identifier(pub u32);
 
 #[repr(C)]
 pub struct DenoiserDesc {
-    identifier: u32,
-    denoiser: Denoiser,
-    render_width: u16,
-    render_height: u16,
+    pub identifier: Identifier,
+    pub denoiser: Denoiser,
+    pub render_width: u16,
+    pub render_height: u16,
 }
 
 #[repr(C)]
@@ -266,13 +266,18 @@ pub enum Sampler {
 }
 
 #[repr(C)]
-#[derive(Debug)]
 pub struct ComputeShaderDesc {
     bytecode: *const c_void,
     size: u64,
 }
+impl Debug for ComputeShaderDesc {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!("ComputeShaderDesc({} bytes)", self.size))
+    }
+}
 
 #[repr(u32)]
+#[derive(Debug)]
 pub enum DescriptorType {
     // read-only, SRV
     Texture,
@@ -282,10 +287,11 @@ pub enum DescriptorType {
 }
 
 #[repr(C)]
-struct ResourceRangeDesc {
-    descriptor_type: DescriptorType,
-    base_register_index: u32,
-    descriptors_num: u32,
+#[derive(Debug)]
+pub struct ResourceRangeDesc {
+    pub descriptor_type: DescriptorType,
+    pub base_register_index: u32,
+    pub descriptors_num: u32,
 }
 
 #[repr(u32)]
@@ -349,7 +355,6 @@ pub enum Format {
 }
 
 #[repr(C)]
-#[derive(Debug)]
 pub struct PipelineDesc {
     pub compute_shader_dxbc: ComputeShaderDesc,
     pub compute_shader_dxil: ComputeShaderDesc,
@@ -359,6 +364,32 @@ pub struct PipelineDesc {
     resource_ranges: *const ResourceRangeDesc,
     resource_ranges_num: u32,
     pub has_constant_data: bool,
+}
+impl PipelineDesc {
+    pub fn shader_file_name(&self) -> &CStr {
+        unsafe { CStr::from_ptr(self.shader_file_name) }
+    }
+    pub fn shader_entry_point_name(&self) -> &CStr {
+        unsafe { CStr::from_ptr(self.shader_entry_point_name) }
+    }
+    pub fn resource_ranges(&self) -> &[ResourceRangeDesc] {
+        unsafe {
+            std::slice::from_raw_parts(self.resource_ranges, self.resource_ranges_num as usize)
+        }
+    }
+}
+impl Debug for PipelineDesc {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PipelineDesc")
+            .field("compute_shader_dxbc", &self.compute_shader_dxbc)
+            .field("compute_shader_dxil", &self.compute_shader_dxil)
+            .field("compute_shader_spirv", &self.compute_shader_spirv)
+            .field("shader_file_name", &self.shader_file_name())
+            .field("shader_entry_point_name", &self.shader_entry_point_name())
+            .field("resource_ranges", &self.resource_ranges())
+            .field("has_constant_data", &self.has_constant_data)
+            .finish()
+    }
 }
 
 #[repr(C)]
@@ -585,6 +616,7 @@ impl Default for CommonSettings {
 
 #[repr(u32)]
 #[allow(non_camel_case_types)]
+#[derive(Debug)]
 pub enum ResourceType {
     //=============================================================================================================================
     // COMMON INPUTS
@@ -710,6 +742,7 @@ pub enum ResourceType {
 }
 
 #[repr(C)]
+#[derive(Debug)]
 pub struct ResourceDesc {
     state_needed: DescriptorType,
     ty: ResourceType,
@@ -725,9 +758,41 @@ pub struct DispatchDesc {
     resources_num: u32,
     constant_buffer_data: *const u8,
     constant_buffer_data_size: u32,
-    pipeline_index: u16,
-    grid_width: u16,
-    grid_height: u16,
+    pub pipeline_index: u16,
+    pub grid_width: u16,
+    pub grid_height: u16,
+}
+impl DispatchDesc {
+    pub fn constant_buffer(&self) -> &[u8] {
+        unsafe {
+            std::slice::from_raw_parts(
+                self.constant_buffer_data,
+                self.constant_buffer_data_size as usize,
+            )
+        }
+    }
+    pub fn resources(&self) -> &[ResourceDesc] {
+        unsafe { std::slice::from_raw_parts(self.resources, self.resources_num as usize) }
+    }
+    pub fn name(&self) -> &CStr {
+        unsafe { CStr::from_ptr(self.name) }
+    }
+}
+
+impl Debug for DispatchDesc {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("DispatchDesc")
+            .field("name", &self.name())
+            .field("resources", &self.resources())
+            .field(
+                "constant_buffer",
+                &format!("{} bytes", self.constant_buffer().len()),
+            )
+            .field("pipeline_index", &self.pipeline_index)
+            .field("grid_width", &self.grid_width)
+            .field("grid_height", &self.grid_height)
+            .finish()
+    }
 }
 
 #[repr(C)]
@@ -824,15 +889,15 @@ impl Default for AntilagHitDistanceSettings {
 
 #[repr(u8)]
 pub enum CheckerboardMode {
-    OFF,
-    BLACK,
-    WHITE,
+    Off,
+    Black,
+    White,
 }
 
 #[repr(u8)]
 pub enum HitDistanceReconstructionMode {
     // Probabilistic split at primary hit is not used, hence hit distance is always valid (reconstruction is not needed)
-    OFF,
+    Off,
 
     // If hit distance is invalid due to probabilistic sampling, reconstruct using 3x3 neighbors.
     // Probability at primary hit must be clamped to [1/4; 3/4] range to guarantee a sample in this area
@@ -924,8 +989,8 @@ impl Default for ReblurSettings {
             stabilization_strength: 1.0,
             plane_distance_sensitivity: 0.005,
             specular_probability_thresholds_for_mv_modification: [0.5, 0.9],
-            checkerboard_mode: CheckerboardMode::OFF,
-            hit_distance_reconstruction_mode: HitDistanceReconstructionMode::OFF,
+            checkerboard_mode: CheckerboardMode::Off,
+            hit_distance_reconstruction_mode: HitDistanceReconstructionMode::Off,
             enable_anti_firefly: false,
             enable_reference_accumulation: false,
             enable_performance_mode: false,
@@ -1073,8 +1138,8 @@ impl Default for RelaxDiffuseSpecularSettings {
             luminance_edge_stopping_relaxation: 0.5,
             normal_edge_stopping_relaxation: 0.3,
             roughness_edge_stopping_relaxation: 1.0,
-            checkerboard_mode: CheckerboardMode::OFF,
-            hit_distance_reconstruction_mode: HitDistanceReconstructionMode::OFF,
+            checkerboard_mode: CheckerboardMode::Off,
+            hit_distance_reconstruction_mode: HitDistanceReconstructionMode::Off,
             enable_anti_firefly: false,
             enable_reprojection_test_skipping_without_motion: false,
             enable_roughness_edge_stopping: true,
@@ -1138,8 +1203,8 @@ impl Default for RelaxDiffuseSettings {
             confidence_driven_relaxation_multiplier: 0.0,
             confidence_driven_luminance_edge_stopping_relaxation: 0.0,
             confidence_driven_normal_edge_stopping_relaxation: 0.0,
-            checkerboard_mode: CheckerboardMode::OFF,
-            hit_distance_reconstruction_mode: HitDistanceReconstructionMode::OFF,
+            checkerboard_mode: CheckerboardMode::Off,
+            hit_distance_reconstruction_mode: HitDistanceReconstructionMode::Off,
             enable_anti_firefly: false,
             enable_reprojection_test_skipping_without_motion: false,
             enable_material_test: false,
@@ -1218,8 +1283,8 @@ impl Default for RelaxSpecularSettings {
             luminance_edge_stopping_relaxation: 0.5,
             normal_edge_stopping_relaxation: 0.3,
             roughness_edge_stopping_relaxation: 1.0,
-            checkerboard_mode: CheckerboardMode::OFF,
-            hit_distance_reconstruction_mode: HitDistanceReconstructionMode::OFF,
+            checkerboard_mode: CheckerboardMode::Off,
+            hit_distance_reconstruction_mode: HitDistanceReconstructionMode::Off,
             enable_anti_firefly: false,
             enable_reprojection_test_skipping_without_motion: false,
             enable_roughness_edge_stopping: true,

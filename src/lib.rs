@@ -2,7 +2,12 @@
 
 use std::ffi::c_void;
 
-pub mod ffi;
+mod ffi;
+
+pub use ffi::{
+    CheckerboardMode, CommonSettings, Denoiser, DenoiserDesc, DispatchDesc,
+    HitDistanceReconstructionMode, Identifier, ReferenceSettings, ResourceType,
+};
 
 mod allocator {
     use std::alloc::{Allocator, Layout};
