@@ -275,6 +275,12 @@ impl Debug for ComputeShaderDesc {
         f.write_fmt(format_args!("ComputeShaderDesc({} bytes)", self.size))
     }
 }
+impl std::ops::Deref for ComputeShaderDesc {
+    type Target = [u8];
+    fn deref(&self) -> &Self::Target {
+        unsafe { std::slice::from_raw_parts(self.bytecode as *const u8, self.size as usize) }
+    }
+}
 
 #[repr(u32)]
 #[derive(Debug)]
@@ -403,33 +409,33 @@ pub struct TextureDesc {
 
 #[repr(C)]
 #[derive(Debug)]
-struct DescriptorPoolDesc {
-    sets_max_num: u32,
-    constant_buffers_max_num: u32,
-    samplers_max_num: u32,
-    textures_max_num: u32,
-    storage_textures_max_num: u32,
+pub struct DescriptorPoolDesc {
+    pub sets_max_num: u32,
+    pub constant_buffers_max_num: u32,
+    pub samplers_max_num: u32,
+    pub textures_max_num: u32,
+    pub storage_textures_max_num: u32,
 }
 
 #[repr(C)]
 pub struct InstanceDesc {
     // Constant buffer (shared)
-    constant_buffer_max_data_size: u32,
-    constant_buffer_space_index: u32,
-    constant_buffer_register_index: u32,
+    pub constant_buffer_max_data_size: u32,
+    pub constant_buffer_space_index: u32,
+    pub constant_buffer_register_index: u32,
 
     // Samplers (shared)
     samplers: *const Sampler,
     samplers_num: u32,
-    samplers_space_index: u32,
-    samplers_base_register_index: u32,
+    pub samplers_space_index: u32,
+    pub samplers_base_register_index: u32,
 
     // Pipelines
     // - if "PipelineDesc::hasConstantData = true" a pipeline has a constant buffer with the shared description
     // - if "samplers" are used as static/immutable samplers, "DescriptorPoolDesc::samplerMaxNum" is not needed (it counts samplers across all dispatches)
     pipelines: *const PipelineDesc,
     pipelines_num: u32,
-    resources_space_index: u32,
+    pub resources_space_index: u32,
 
     // Textures
     permanent_pool: *const TextureDesc,
@@ -438,7 +444,7 @@ pub struct InstanceDesc {
     transient_pool_size: u32,
 
     // Limits
-    descriptor_pool_desc: DescriptorPoolDesc,
+    pub descriptor_pool_desc: DescriptorPoolDesc,
 }
 impl InstanceDesc {
     pub fn samplers(&self) -> &[Sampler] {
