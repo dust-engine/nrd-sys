@@ -7,6 +7,7 @@ mod ffi;
 pub use ffi::{
     CheckerboardMode, CommonSettings, Denoiser, DenoiserDesc, DispatchDesc,
     HitDistanceReconstructionMode, Identifier, ReferenceSettings, ResourceType,
+    DescriptorType,
 };
 
 mod allocator {

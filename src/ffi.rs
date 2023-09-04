@@ -13,7 +13,7 @@ pub struct SPIRVBindingOffsets {
 }
 
 #[repr(u32)]
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum Denoiser {
     // =============================================================================================================================
     // REBLUR
@@ -134,7 +134,7 @@ pub enum Denoiser {
 }
 
 #[repr(u8)]
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum NormalEncoding {
     // Worst IQ on curved (not bumpy) surfaces
     Rgba8Unorm,
@@ -150,7 +150,7 @@ pub enum NormalEncoding {
 
 /// NRD_ROUGHNESS_ENCODING variants
 #[repr(u8)]
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum RoughnessEncoding {
     // Alpha (m)
     SqLinear,
@@ -200,7 +200,7 @@ impl Debug for LibraryDesc {
 }
 
 #[repr(u32)]
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum Result {
     Success,
     Failure,
@@ -255,7 +255,7 @@ pub(crate) struct InstanceCreationDesc {
 }
 
 #[repr(u32)]
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum Sampler {
     NearestClamp,
     NearestMirroredRepeat,
@@ -283,7 +283,7 @@ impl std::ops::Deref for ComputeShaderDesc {
 }
 
 #[repr(u32)]
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum DescriptorType {
     // read-only, SRV
     Texture,
@@ -301,7 +301,7 @@ pub struct ResourceRangeDesc {
 }
 
 #[repr(u32)]
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 #[allow(non_camel_case_types)]
 pub enum Format {
     R8_UNORM,
@@ -496,7 +496,7 @@ impl Debug for InstanceDesc {
 }
 
 #[repr(u8)]
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum AccumulationMode {
     // Common mode (accumulation continues normally)
     Continue,
@@ -622,7 +622,7 @@ impl Default for CommonSettings {
 
 #[repr(u32)]
 #[allow(non_camel_case_types)]
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum ResourceType {
     //=============================================================================================================================
     // COMMON INPUTS
@@ -750,11 +750,11 @@ pub enum ResourceType {
 #[repr(C)]
 #[derive(Debug)]
 pub struct ResourceDesc {
-    state_needed: DescriptorType,
-    ty: ResourceType,
-    index_in_pool: u16,
-    mip_offset: u16,
-    mip_num: u16,
+    pub state_needed: DescriptorType,
+    pub ty: ResourceType,
+    pub index_in_pool: u16,
+    pub mip_offset: u16,
+    pub mip_num: u16,
 }
 
 #[repr(C)]
@@ -894,6 +894,7 @@ impl Default for AntilagHitDistanceSettings {
 }
 
 #[repr(u8)]
+#[derive(Clone, Copy, Debug)]
 pub enum CheckerboardMode {
     Off,
     Black,
@@ -901,6 +902,7 @@ pub enum CheckerboardMode {
 }
 
 #[repr(u8)]
+#[derive(Clone, Copy, Debug)]
 pub enum HitDistanceReconstructionMode {
     // Probabilistic split at primary hit is not used, hence hit distance is always valid (reconstruction is not needed)
     Off,

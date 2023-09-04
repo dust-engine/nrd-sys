@@ -1,8 +1,10 @@
 fn main() {
+    let lib_desc = nrd::Instance::library_desc();
+    println!("{:#?}", lib_desc);
     let id1 = nrd::Identifier(0);
     let mut instance = nrd::Instance::new(&[nrd::DenoiserDesc {
         identifier: id1,
-        denoiser: nrd::Denoiser::Reference,
+        denoiser: nrd::Denoiser::ReblurDiffuse,
         render_width: 100,
         render_height: 100,
     }])
