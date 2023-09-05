@@ -17,7 +17,7 @@ fn get_download_name() -> &'static [&'static str] {
     }
     #[cfg(target_family = "windows")]
     {
-        return &["NRD.lib"];
+        return &["NRD.lib", "NRD.dll"];
     }
     #[allow(unreachable_code)]
     {

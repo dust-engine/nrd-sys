@@ -4,12 +4,12 @@ use std::{
 };
 
 #[repr(C)]
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct SPIRVBindingOffsets {
-    sampler_offset: u32,
-    texture_offset: u32,
-    constant_buffer_offset: u32,
-    storage_texture_and_buffer_offset: u32,
+    pub sampler_offset: u32,
+    pub texture_offset: u32,
+    pub constant_buffer_offset: u32,
+    pub storage_texture_and_buffer_offset: u32,
 }
 
 #[repr(u32)]
@@ -261,8 +261,6 @@ pub enum Sampler {
     NearestMirroredRepeat,
     LinearClamp,
     LinearMirroredRepeat,
-
-    MaxNum,
 }
 
 #[repr(C)]
@@ -283,7 +281,7 @@ impl std::ops::Deref for ComputeShaderDesc {
 }
 
 #[repr(u32)]
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DescriptorType {
     // read-only, SRV
     Texture,
@@ -369,6 +367,7 @@ pub struct PipelineDesc {
     shader_entry_point_name: *const c_char,
     resource_ranges: *const ResourceRangeDesc,
     resource_ranges_num: u32,
+    pub max_repeat_num: u32,
     pub has_constant_data: bool,
 }
 impl PipelineDesc {
@@ -393,13 +392,14 @@ impl Debug for PipelineDesc {
             .field("shader_file_name", &self.shader_file_name())
             .field("shader_entry_point_name", &self.shader_entry_point_name())
             .field("resource_ranges", &self.resource_ranges())
+            .field("max_repeat_num", &self.max_repeat_num)
             .field("has_constant_data", &self.has_constant_data)
             .finish()
     }
 }
 
 #[repr(C)]
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct TextureDesc {
     pub format: Format,
     pub width: u16,
