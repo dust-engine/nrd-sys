@@ -802,6 +802,7 @@ impl Debug for DispatchDesc {
 }
 
 #[repr(C)]
+#[derive(Clone)]
 pub struct HitDistanceParameters {
     // (units) - constant value
     // IMPORTANT: if your unit is not "meter", you must convert it from "meters" to "units" manually!
@@ -834,6 +835,7 @@ impl Default for HitDistanceParameters {
 //        - 1 - keep accumulation
 //        - 0 - history reset
 #[repr(C)]
+#[derive(Clone)]
 pub struct AntilagIntensitySettings {
     // (normalized %) - must be big enough to almost ignore residual noise (boiling), default is tuned for 0.5rpp in general
     pub threshold_min: f32,
@@ -864,6 +866,7 @@ impl Default for AntilagIntensitySettings {
 }
 
 #[repr(C)]
+#[derive(Clone)]
 pub struct AntilagHitDistanceSettings {
     // (normalized %) - must almost ignore residual noise (boiling), default is tuned for 0.5rpp for the worst case
     pub threshold_min: f32,
@@ -916,6 +919,7 @@ pub enum HitDistanceReconstructionMode {
     Area5x5,
 }
 #[repr(C)]
+#[derive(Clone)]
 pub struct ReblurSettings {
     pub hit_distance_parameters: HitDistanceParameters,
     pub antilag_intensity_settings: AntilagIntensitySettings,

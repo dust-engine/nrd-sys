@@ -5,11 +5,11 @@ use std::ffi::c_void;
 mod ffi;
 
 pub use ffi::{
-    CheckerboardMode, CommonSettings, Denoiser, DenoiserDesc, DispatchDesc,
-    HitDistanceReconstructionMode, Identifier, ReferenceSettings, ResourceType,
-    DescriptorType, Sampler, ReblurSettings, RelaxDiffuseSettings,
-    RelaxDiffuseSpecularSettings, RelaxSpecularSettings, SigmaSettings,
-    Format, TextureDesc, ResourceDesc, SPIRVBindingOffsets
+    AccumulationMode, AntilagHitDistanceSettings, AntilagIntensitySettings, CheckerboardMode,
+    CommonSettings, Denoiser, DenoiserDesc, DescriptorType, DispatchDesc, Format,
+    HitDistanceParameters, HitDistanceReconstructionMode, Identifier, ReblurSettings,
+    ReferenceSettings, RelaxDiffuseSettings, RelaxDiffuseSpecularSettings, RelaxSpecularSettings,
+    ResourceDesc, ResourceType, SPIRVBindingOffsets, Sampler, SigmaSettings, TextureDesc,
 };
 
 mod allocator {
@@ -64,6 +64,9 @@ impl DenoiserSettings for ffi::ReferenceSettings {}
 impl DenoiserSettings for ffi::SigmaSettings {}
 
 pub struct Instance(*mut c_void);
+unsafe impl Send for Instance {}
+unsafe impl Sync for Instance {}
+
 impl Instance {
     pub fn library_desc() -> &'static ffi::LibraryDesc {
         unsafe { ffi::GetLibraryDesc() }
