@@ -22,7 +22,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "nrd"
+name = "nrd-sys"
 version = "0.1.0"
 dependencies = [
  "sysreq",

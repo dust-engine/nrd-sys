@@ -367,7 +367,6 @@ pub struct PipelineDesc {
     shader_entry_point_name: *const c_char,
     resource_ranges: *const ResourceRangeDesc,
     resource_ranges_num: u32,
-    pub max_repeat_num: u32,
     pub has_constant_data: bool,
 }
 impl PipelineDesc {
@@ -392,7 +391,6 @@ impl Debug for PipelineDesc {
             .field("shader_file_name", &self.shader_file_name())
             .field("shader_entry_point_name", &self.shader_entry_point_name())
             .field("resource_ranges", &self.resource_ranges())
-            .field("max_repeat_num", &self.max_repeat_num)
             .field("has_constant_data", &self.has_constant_data)
             .finish()
     }
@@ -856,7 +854,7 @@ pub struct AntilagIntensitySettings {
 impl Default for AntilagIntensitySettings {
     fn default() -> Self {
         Self {
-            threshold_min: 0.3,
+            threshold_min: 0.03,
             threshold_max: 0.2,
             sigma_scale: 1.0,
             sensitivity_to_darkness: 0.0,
