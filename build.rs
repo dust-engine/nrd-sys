@@ -13,7 +13,7 @@ fn get_install_path() -> impl Iterator<Item = (&'static str, OsString)> {
 fn get_download_name() -> &'static [&'static str] {
     #[cfg(target_family = "unix")]
     {
-        return &["libNRD.a"];
+        return &["libNRD.so"];
     }
     #[cfg(target_family = "windows")]
     {

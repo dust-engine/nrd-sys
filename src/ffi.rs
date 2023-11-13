@@ -1315,8 +1315,34 @@ impl Default for ReferenceSettings {
     }
 }
 
-#[allow(non_snake_case)]
-extern "fastcall" {
+#[cfg(any(
+    target_env = "msvc",
+    all(
+        not(target_arch = "aarch64"),
+        not(target_arch = "x86_64"),
+    )
+))]
+macro_rules! nrd_abi {
+    ($($toks: tt)+) => {
+        extern "fastcall" {$($toks)+}
+    };
+}
+
+#[cfg(not(any(
+    target_env = "msvc",
+    all(
+        not(target_arch = "aarch64"),
+        not(target_arch = "x86_64"),
+    )
+)))]
+macro_rules! nrd_abi {
+    ($($toks: tt)+) => {
+        extern "C" {$($toks)+}
+    };
+}
+
+
+nrd_abi! {
     pub(crate) fn GetLibraryDesc() -> &'static LibraryDesc;
     pub(crate) fn CreateInstance(desc: &InstanceCreationDesc, instance: &mut *mut c_void)
         -> Result;
