@@ -29,7 +29,7 @@ fn main() {
     for (download_name, install_path) in get_install_path() {
         if !std::fs::try_exists(&install_path).expect("Unable to check library file location") {
             let data = sysreq::get(format!(
-                "https://github.com/dust-engine/NRD/releases/download/v0.1/{}",
+                "https://github.com/dust-engine/nrd-sys/releases/download/v0.2/{}",
                 download_name
             ))
             .expect("Download file error");

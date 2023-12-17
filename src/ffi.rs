@@ -15,53 +15,59 @@ pub struct SPIRVBindingOffsets {
 #[repr(u32)]
 #[derive(Debug, Clone, Copy)]
 pub enum Denoiser {
+    /*
+    IMPORTANT: IN_MV, IN_NORMAL_ROUGHNESS, IN_VIEWZ are used by any denoiser
+    These denoisers DON'T use:
+        REFERENCE - IN_MV, IN_NORMAL_ROUGHNESS, IN_VIEWZ
+        SPECULAR_DELTA_MV - IN_NORMAL_ROUGHNESS, IN_VIEWZ
+    */
     // =============================================================================================================================
     // REBLUR
     // =============================================================================================================================
 
-    // INPUTS - IN_MV, IN_NORMAL_ROUGHNESS, IN_VIEWZ, IN_DIFF_RADIANCE_HITDIST,
+    // INPUTS - IN_DIFF_RADIANCE_HITDIST,
     // OPTIONAL INPUTS - IN_DIFF_CONFIDENCE
     // OUTPUTS - OUT_DIFF_RADIANCE_HITDIST
     ReblurDiffuse,
 
-    // INPUTS - IN_MV, IN_NORMAL_ROUGHNESS, IN_VIEWZ, IN_DIFF_HITDIST,
+    // INPUTS - IN_DIFF_HITDIST,
     // OUTPUTS - OUT_DIFF_HITDIST
     ReblurDiffuseOcclusion,
 
-    // INPUTS - IN_MV, IN_NORMAL_ROUGHNESS, IN_VIEWZ, IN_DIFF_SH0, IN_DIFF_SH1
+    // INPUTS - IN_DIFF_SH0, IN_DIFF_SH1
     // OPTIONAL INPUTS - IN_DIFF_CONFIDENCE
     // OUTPUTS - OUT_DIFF_SH0, OUT_DIFF_SH1
     ReblurDiffuseSh,
 
-    // INPUTS - IN_MV, IN_NORMAL_ROUGHNESS, IN_VIEWZ, IN_SPEC_RADIANCE_HITDIST,
+    // INPUTS - IN_SPEC_RADIANCE_HITDIST,
     // OPTIONAL INPUTS - IN_SPEC_DIRECTION_PDF, IN_SPEC_CONFIDENCE
     // OUTPUTS - OUT_SPEC_RADIANCE_HITDIST
     ReblurSpecular,
 
-    // INPUTS - IN_MV, IN_NORMAL_ROUGHNESS, IN_VIEWZ, IN_SPEC_HITDIST,
+    // INPUTS - IN_SPEC_HITDIST,
     // OUTPUTS - OUT_SPEC_HITDIST
     ReblurSpecularOcclusion,
 
-    // INPUTS - IN_MV, IN_NORMAL_ROUGHNESS, IN_VIEWZ, IN_SPEC_SH0, IN_SPEC_SH1
+    // INPUTS - IN_SPEC_SH0, IN_SPEC_SH1
     // OPTIONAL INPUTS - IN_SPEC_CONFIDENCE
     // OUTPUTS - OUT_SPEC_SH0, OUT_SPEC_SH1
     ReblurSpecularSh,
 
-    // INPUTS - IN_MV, IN_NORMAL_ROUGHNESS, IN_VIEWZ, IN_DIFF_RADIANCE_HITDIST, IN_SPEC_RADIANCE_HITDIST,
+    // INPUTS - IN_DIFF_RADIANCE_HITDIST, IN_SPEC_RADIANCE_HITDIST,
     // OPTIONAL INPUTS - IN_DIFF_CONFIDENCE,  IN_SPEC_CONFIDENCE
     // OUTPUTS - OUT_DIFF_RADIANCE_HITDIST, OUT_SPEC_RADIANCE_HITDIST
     ReblurDiffuseSpecular,
 
-    // INPUTS - IN_MV, IN_NORMAL_ROUGHNESS, IN_VIEWZ, IN_DIFF_HITDIST, IN_SPEC_HITDIST,
+    // INPUTS - IN_DIFF_HITDIST, IN_SPEC_HITDIST,
     // OUTPUTS - OUT_DIFF_HITDIST, OUT_SPEC_HITDIST
     ReblurDiffuseSpecularOcclusion,
 
-    // INPUTS - IN_MV, IN_NORMAL_ROUGHNESS, IN_VIEWZ, IN_DIFF_SH0, IN_DIFF_SH1, IN_SPEC_SH0, IN_SPEC_SH1
+    // INPUTS - IN_DIFF_SH0, IN_DIFF_SH1, IN_SPEC_SH0, IN_SPEC_SH1
     // OPTIONAL INPUTS - IN_DIFF_CONFIDENCE,  IN_SPEC_CONFIDENCE
     // OUTPUTS - OUT_DIFF_SH0, OUT_DIFF_SH1, OUT_SPEC_SH0, OUT_SPEC_SH1
     ReblurDiffuseSpecularSh,
 
-    // INPUTS - IN_MV, IN_NORMAL_ROUGHNESS, IN_VIEWZ, IN_DIFF_DIRECTION_HITDIST,
+    // INPUTS - IN_DIFF_DIRECTION_HITDIST,
     // OPTIONAL INPUTS - IN_DIFF_CONFIDENCE
     // OUTPUTS - OUT_DIFF_DIRECTION_HITDIST
     ReblurDiffuseDirectionalOcclusion,
@@ -70,11 +76,11 @@ pub enum Denoiser {
     // SIGMA
     // =============================================================================================================================
 
-    // INPUTS - IN_NORMAL_ROUGHNESS, IN_SHADOWDATA, OUT_SHADOW_TRANSLUCENCY (used as history)
+    // INPUTS - IN_SHADOWDATA, OUT_SHADOW_TRANSLUCENCY (used as history)
     // OUTPUTS - OUT_SHADOW_TRANSLUCENCY
     SigmaShadow,
 
-    // INPUTS - IN_NORMAL_ROUGHNESS, IN_SHADOWDATA, IN_SHADOW_TRANSLUCENCY, OUT_SHADOW_TRANSLUCENCY (used as history)
+    // INPUTS - IN_SHADOWDATA, IN_SHADOW_TRANSLUCENCY, OUT_SHADOW_TRANSLUCENCY (used as history)
     // OUTPUTS - OUT_SHADOW_TRANSLUCENCY
     SigmaShadowTranslucency,
 
@@ -82,32 +88,32 @@ pub enum Denoiser {
     // RELAX
     // =============================================================================================================================
 
-    // INPUTS - IN_MV, IN_NORMAL_ROUGHNESS, IN_VIEWZ, IN_DIFF_RADIANCE_HITDIST
+    // INPUTS - IN_DIFF_RADIANCE_HITDIST
     // OPTIONAL INPUTS - IN_DIFF_CONFIDENCE
     // OUTPUTS - OUT_DIFF_RADIANCE_HITDIST
     RelaxDiffuse,
 
-    // INPUTS - IN_MV, IN_NORMAL_ROUGHNESS, IN_VIEWZ, IN_DIFF_SH0, IN_DIFF_SH1
+    // INPUTS - IN_DIFF_SH0, IN_DIFF_SH1
     // OPTIONAL INPUTS - IN_DIFF_CONFIDENCE
     // OUTPUTS - OUT_DIFF_SH0, OUT_DIFF_SH1
     RelaxDiffuseSh,
 
-    // INPUTS - IN_MV, IN_NORMAL_ROUGHNESS, IN_VIEWZ, IN_SPEC_RADIANCE_HITDIST
+    // INPUTS - IN_SPEC_RADIANCE_HITDIST
     // OPTIONAL INPUTS - IN_SPEC_CONFIDENCE
     // OUTPUTS - OUT_SPEC_RADIANCE_HITDIST
     RelaxSpecular,
 
-    // INPUTS - IN_MV, IN_NORMAL_ROUGHNESS, IN_VIEWZ, IN_SPEC_SH0, IN_SPEC_SH1
+    // INPUTS - IN_SPEC_SH0, IN_SPEC_SH1
     // OPTIONAL INPUTS - IN_SPEC_CONFIDENCE
     // OUTPUTS - OUT_SPEC_SH0, OUT_SPEC_SH1
     RelaxSpecularSh,
 
-    // INPUTS - IN_MV, IN_NORMAL_ROUGHNESS, IN_VIEWZ, IN_DIFF_RADIANCE_HITDIST, IN_SPEC_RADIANCE_HITDIST
+    // INPUTS - IN_DIFF_RADIANCE_HITDIST, IN_SPEC_RADIANCE_HITDIST
     // OPTIONAL INPUTS - IN_DIFF_CONFIDENCE,  IN_SPEC_CONFIDENCE
     // OUTPUTS - OUT_DIFF_RADIANCE_HITDIST, OUT_SPEC_RADIANCE_HITDIST
     RelaxDiffuseSpecular,
 
-    // INPUTS - IN_MV, IN_NORMAL_ROUGHNESS, IN_VIEWZ, IN_DIFF_SH0, IN_DIFF_SH1, IN_SPEC_SH0, IN_SPEC_SH1
+    // INPUTS - IN_DIFF_SH0, IN_DIFF_SH1, IN_SPEC_SH0, IN_SPEC_SH1
     // OPTIONAL INPUTS - IN_DIFF_CONFIDENCE,  IN_SPEC_CONFIDENCE
     // OUTPUTS - OUT_DIFF_SH0, OUT_DIFF_SH1, OUT_SPEC_SH0, OUT_SPEC_SH1
     RelaxDiffuseSpecularSh,
@@ -124,11 +130,11 @@ pub enum Denoiser {
     // MOTION VECTORS
     // =============================================================================================================================
 
-    // INPUTS - IN_MV, IN_NORMAL_ROUGHNESS, IN_VIEWZ, IN_SPEC_HITDIST
+    // INPUTS - IN_SPEC_HITDIST
     // OUTPUTS - OUT_REFLECTION_MV
     SpecularReflectionMv,
 
-    // INPUTS - IN_MV, IN_DELTA_PRIMARY_POS, IN_DELTA_SECONDARY_POS
+    // INPUTS - IN_DELTA_PRIMARY_POS, IN_DELTA_SECONDARY_POS
     // OUTPUT - OUT_DELTA_MV
     SpecularDeltaMv,
 }
@@ -834,62 +840,23 @@ impl Default for HitDistanceParameters {
 //        - 0 - history reset
 #[repr(C)]
 #[derive(Clone)]
-pub struct AntilagIntensitySettings {
-    // (normalized %) - must be big enough to almost ignore residual noise (boiling), default is tuned for 0.5rpp in general
-    pub threshold_min: f32,
+pub struct ReblurAntilagSettings {
+    // [1; 3] - delta is reduced by local variance multiplied by this value
+    pub luminance_sigma_scale: f32,
+    pub hit_distance_sigma_scale: f32,
 
-    // (normalized %) - max > min, usually 3-5x times greater than min
-    pub threshold_max: f32,
-
-    // (> 0) - real delta is reduced by local variance multiplied by this value
-    pub sigma_scale: f32,
-
-    // (intensity units) - bigger values make antilag less sensitive to lightness fluctuations in dark places
-    pub sensitivity_to_darkness: f32, // IMPORTANT: 0 is a bad default
-
-    // Ideally, must be enabled, but since "sensitivityToDarkness" requires fine tuning from the app side it is disabled by default
-    pub enable: bool, // IMPORTANT: doesn't affect "occlusion" denoisers
+    // (0; 1] - antilag = pow( antilag, power )
+    pub luminance_antilag_power: f32,
+    pub hit_distance_antilag_power: f32,
 }
 
-impl Default for AntilagIntensitySettings {
+impl Default for ReblurAntilagSettings {
     fn default() -> Self {
         Self {
-            threshold_min: 0.03,
-            threshold_max: 0.2,
-            sigma_scale: 1.0,
-            sensitivity_to_darkness: 0.0,
-            enable: false,
-        }
-    }
-}
-
-#[repr(C)]
-#[derive(Clone)]
-pub struct AntilagHitDistanceSettings {
-    // (normalized %) - must almost ignore residual noise (boiling), default is tuned for 0.5rpp for the worst case
-    pub threshold_min: f32,
-
-    // (normalized %) - max > min, usually 2-4x times greater than min
-    pub threshold_max: f32,
-
-    // (> 0) - real delta is reduced by local variance multiplied by this value
-    pub sigma_scale: f32,
-
-    // (0; 1] - hit distances are normalized
-    pub sensitivity_to_darkness: f32,
-
-    // Enabled by default
-    pub enable: bool,
-}
-
-impl Default for AntilagHitDistanceSettings {
-    fn default() -> Self {
-        Self {
-            threshold_min: 0.03,
-            threshold_max: 0.2,
-            sigma_scale: 1.0,
-            sensitivity_to_darkness: 0.1,
-            enable: true,
+            luminance_sigma_scale: 2.0,
+            hit_distance_sigma_scale: 2.0,
+            luminance_antilag_power: 0.5,
+            hit_distance_antilag_power: 1.0,
         }
     }
 }
@@ -920,8 +887,7 @@ pub enum HitDistanceReconstructionMode {
 #[derive(Clone)]
 pub struct ReblurSettings {
     pub hit_distance_parameters: HitDistanceParameters,
-    pub antilag_intensity_settings: AntilagIntensitySettings,
-    pub antilag_hit_distance_settings: AntilagHitDistanceSettings,
+    pub antilag_settings: ReblurAntilagSettings,
 
     // [0; REBLUR_MAX_HISTORY_FRAME_NUM] - maximum number of linearly accumulated frames (= FPS * "time of accumulation")
     pub max_accumulated_frame_num: u32,
@@ -932,7 +898,7 @@ pub struct ReblurSettings {
     // [0; REBLUR_MAX_HISTORY_FRAME_NUM] - number of reconstructed frames after history reset (less than "maxFastAccumulatedFrameNum")
     pub history_fix_frame_num: u32,
 
-    // (pixels) - pre-accumulation spatial reuse pass blur radius (0 = disabled, must be used in case of probabilistic sampling)
+    // (pixels) - pre-accumulation spatial reuse pass blur radius (0 = disabled, recommended in case of probabilistic sampling)
     pub diffuse_prepass_blur_radius: f32,
     pub specular_prepass_blur_radius: f32,
 
@@ -957,7 +923,7 @@ pub struct ReblurSettings {
     // (normalized %) - represents maximum allowed deviation from local tangent plane
     pub plane_distance_sensitivity: f32,
 
-    // IN_MV = lerp(IN_MV, specularMotion, smoothstep(specularProbabilityThresholdsForMvModification[0], specularProbabilityThresholdsForMvModification[1], specularProbability))
+    // IN_MV = lerp(IN_MV, specularMotion, smoothstep(this[0], this[1], specularProbability))
     pub specular_probability_thresholds_for_mv_modification: [f32; 2],
 
     // If not OFF and used for DIFFUSE_SPECULAR, defines diffuse orientation, specular orientation is the opposite
@@ -978,14 +944,21 @@ pub struct ReblurSettings {
     // Spatial passes do optional material index comparison as: ( materialEnabled ? material[ center ] == material[ sample ] : 1 )
     pub enable_material_test_for_diffuse: bool,
     pub enable_material_test_for_specular: bool,
+
+    // In rare cases, when bright samples are so sparse that any other bright neighbor can't
+    // be reached, pre-pass transforms a standalone bright pixel into a standalone bright blob,
+    // worsening the situation. Despite that it's a problem of sampling, the denoiser needs to
+    // handle it somehow on its side too. Diffuse pre-pass can be just disabled, but for specular
+    // it's still needed to find optimal hit distance for tracking. This boolean allow to use
+    // specular pre-pass for tracking purposes only
+    pub use_prepass_only_for_specular_motion_estimation: bool,
 }
 
 impl Default for ReblurSettings {
     fn default() -> Self {
         Self {
             hit_distance_parameters: Default::default(),
-            antilag_intensity_settings: Default::default(),
-            antilag_hit_distance_settings: Default::default(),
+            antilag_settings: Default::default(),
             max_accumulated_frame_num: 30,
             max_fast_accumulated_frame_num: 6,
             history_fix_frame_num: 3,
@@ -1006,6 +979,7 @@ impl Default for ReblurSettings {
             enable_performance_mode: false,
             enable_material_test_for_diffuse: false,
             enable_material_test_for_specular: false,
+            use_prepass_only_for_specular_motion_estimation: false,
         }
     }
 }
@@ -1027,10 +1001,40 @@ impl Default for SigmaSettings {
     }
 }
 
+#[repr(C)]
+pub struct RelaxAntilagSettings {
+    // IMPORTANT: History acceleration and reset amounts for specular are made 2x-3x weaker than values for diffuse below
+    // due to specific specular logic that does additional history acceleration and reset
+
+    // [0; 1] - amount of history acceleration if history clamping happened in pixel
+    acceleration_amount: f32,
+
+    // (> 0) - history is being reset if delta between history and raw input is larger than spatial sigma + temporal sigma
+    spatial_sigma_scale: f32,
+
+    // (> 0) - history is being reset if delta between history and raw input is larger than spatial sigma + temporal sigma
+    temporal_sigma_scale: f32,
+
+    // [0; 1] - amount of history reset, 0.0 - no reset, 1.0 - full reset
+    reset_amount: f32,
+}
+
+impl Default for RelaxAntilagSettings {
+    fn default() -> Self {
+        Self {
+            acceleration_amount: 0.3,
+            spatial_sigma_scale: 4.5,
+            temporal_sigma_scale: 0.5,
+            reset_amount: 0.5,
+        }
+    }
+}
+
 // RELAX_DIFFUSE_SPECULAR
 #[repr(C)]
 
 pub struct RelaxDiffuseSpecularSettings {
+    pub antilag_settings: RelaxAntilagSettings,
     // (pixels) - pre-accumulation spatial reuse pass blur radius (0 = disabled, must be used in case of probabilistic sampling)
     pub diffuse_prepass_blur_radius: f32,
     pub specular_prepass_blur_radius: f32,
@@ -1075,7 +1079,7 @@ pub struct RelaxDiffuseSpecularSettings {
     // (>= 0) - history length threshold below which spatial variance estimation will be executed
     pub spatial_variance_estimation_history_threshold: u32,
 
-    // [2; 8] - number of iteration for A-Trous wavelet transform
+    // [2; 8] - number of iterations for A-Trous wavelet transform
     pub atrous_iteration_num: u32,
 
     // [0; 1] - A-trous edge stopping Luminance weight minimum
@@ -1120,7 +1124,8 @@ pub struct RelaxDiffuseSpecularSettings {
 impl Default for RelaxDiffuseSpecularSettings {
     fn default() -> Self {
         Self {
-            diffuse_prepass_blur_radius: 0.0,
+            antilag_settings: Default::default(),
+            diffuse_prepass_blur_radius: 50.0,
             specular_prepass_blur_radius: 50.0,
             diffuse_max_accumulated_frame_num: 30,
             specular_max_accumulated_frame_num: 30,
@@ -1163,6 +1168,7 @@ impl Default for RelaxDiffuseSpecularSettings {
 
 #[repr(C)]
 pub struct RelaxDiffuseSettings {
+    pub antilag_settings: RelaxAntilagSettings,
     pub prepass_blur_radius: f32,
 
     pub diffuse_max_accumulated_frame_num: u32,
@@ -1197,7 +1203,8 @@ pub struct RelaxDiffuseSettings {
 impl Default for RelaxDiffuseSettings {
     fn default() -> Self {
         Self {
-            prepass_blur_radius: 0.0,
+            antilag_settings: Default::default(),
+            prepass_blur_radius: 30.0,
             diffuse_max_accumulated_frame_num: 30,
             diffuse_max_fast_accumulated_frame_num: 6,
             history_fix_frame_num: 3,
@@ -1226,6 +1233,7 @@ impl Default for RelaxDiffuseSettings {
 
 #[repr(C)]
 pub struct RelaxSpecularSettings {
+    pub antilag_settings: RelaxAntilagSettings,
     pub prepass_blur_radius: f32,
 
     pub specular_max_accumulated_frame_num: u32,
@@ -1270,6 +1278,7 @@ pub struct RelaxSpecularSettings {
 impl Default for RelaxSpecularSettings {
     fn default() -> Self {
         Self {
+            antilag_settings: Default::default(),
             prepass_blur_radius: 50.0,
             specular_max_accumulated_frame_num: 30,
             specular_max_fast_accumulated_frame_num: 6,

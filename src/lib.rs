@@ -5,11 +5,11 @@ use std::ffi::c_void;
 mod ffi;
 
 pub use ffi::{
-    AccumulationMode, AntilagHitDistanceSettings, AntilagIntensitySettings, CheckerboardMode,
-    CommonSettings, Denoiser, DenoiserDesc, DescriptorType, DispatchDesc, Format,
-    HitDistanceParameters, HitDistanceReconstructionMode, Identifier, ReblurSettings,
-    ReferenceSettings, RelaxDiffuseSettings, RelaxDiffuseSpecularSettings, RelaxSpecularSettings,
-    ResourceDesc, ResourceType, SPIRVBindingOffsets, Sampler, SigmaSettings, TextureDesc,
+    AccumulationMode, CheckerboardMode, CommonSettings, Denoiser, DenoiserDesc, DescriptorType,
+    DispatchDesc, Format, HitDistanceParameters, HitDistanceReconstructionMode, Identifier,
+    ReblurAntilagSettings, ReblurSettings, ReferenceSettings, RelaxAntilagSettings,
+    RelaxDiffuseSettings, RelaxDiffuseSpecularSettings, RelaxSpecularSettings, ResourceDesc,
+    ResourceType, SPIRVBindingOffsets, Sampler, SigmaSettings, TextureDesc,
 };
 
 mod allocator {
