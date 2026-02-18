@@ -626,7 +626,7 @@ impl Default for CommonSettings {
 
 #[repr(u32)]
 #[allow(non_camel_case_types)]
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ResourceType {
     //=============================================================================================================================
     // COMMON INPUTS
@@ -774,6 +774,9 @@ pub struct DispatchDesc {
 }
 impl DispatchDesc {
     pub fn constant_buffer(&self) -> &[u8] {
+        if self.constant_buffer_data.is_null() {
+            return &[];
+        }
         unsafe {
             std::slice::from_raw_parts(
                 self.constant_buffer_data,

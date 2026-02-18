@@ -2,7 +2,7 @@
 
 use std::ffi::c_void;
 
-mod ffi;
+pub mod ffi;
 
 pub use ffi::{
     AccumulationMode, CheckerboardMode, CommonSettings, Denoiser, DenoiserDesc, DescriptorType,
